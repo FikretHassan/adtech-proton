@@ -338,8 +338,6 @@ proton.logSearch('keyword')        // Filter logs
 | Parameter | Effect |
 |-----------|--------|
 | `?adsDisableStack` | Disable all ads |
-| `?adkill` | Kill all ads |
-| `?adgptoff` | Disable GPT |
 | `?adSraOn` | Force SRA batching on |
 | `?adSraOff` | Force SRA batching off |
 
