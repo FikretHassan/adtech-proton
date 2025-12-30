@@ -34,7 +34,7 @@ Slot rules are defined declaratively in `config/wrapperauctions/slots.json`:
         "wrappers": {
           "prebid": {
             "bidders": {
-              "ozone": { "placementId": "0420420600" },
+              "ozone": { "placementId": "12345" },
               "criteo": true
             }
           },

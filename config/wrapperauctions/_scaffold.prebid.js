@@ -157,65 +157,6 @@ function buildOrtb2Imp(slotId, context = {}) {
 // ============================================================================
 
 /**
- * Build Ozone-specific customData format
- */
-function buildOzoneCustomData(slotId) {
-  const targeting = adTargeting.buildPageTargeting();
-  return [{
-    settings: {},
-    targeting: { ...targeting, div: slotId }
-  }];
-}
-
-/**
- * Build Ozone bidder config for setBidderConfig
- */
-function buildOzoneBidderConfig() {
-  const targeting = adTargeting.buildPageTargeting();
-  return {
-    bidders: ['ozone'],
-    config: {
-      ortb2: {
-        site: {
-          ext: {
-            data: targeting
-          }
-        }
-      }
-    }
-  };
-}
-
-/**
- * Build Ozone bid params
- * @param slotId - Slot ID
- * @param bidderParams - Params from slots.json (placementId, etc.)
- * @param video - Whether this is a video slot
- */
-function buildOzoneBid(slotId, bidderParams, video = false) {
-  const config = getBidderConfig();
-
-  const bid = {
-    bidder: 'ozone',
-    params: {
-      publisherId: config.ozone.publisherId,
-      siteId: config.ozone.siteId,
-      placementId: bidderParams.placementId,
-      customData: buildOzoneCustomData(slotId)
-    }
-  };
-
-  if (video) {
-    bid.params.video = {
-      skippable: true,
-      playback_method: ['auto_play_sound_off']
-    };
-  }
-
-  return bid;
-}
-
-/**
  * Build Criteo bid params
  */
 function buildCriteoBid() {
