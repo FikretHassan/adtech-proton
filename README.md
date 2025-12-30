@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 
-A configurable commercial ad tech orchestration framework for publishers.
+A configurable commercial ad tech orchestration framework for publishers. Work in Progress.
 
 ## Features
 
