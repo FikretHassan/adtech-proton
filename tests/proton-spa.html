@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proton SPA Test</title>
+
+    <!-- Load Plugin Loader PubSub (window.PubSub) - MUST be first -->
+    <script>"use strict";(()=>{var e=class{constructor(){this.instanceId=this.generateInstanceId(),this.topics=[],this.publishedTopics=[],this.uid=-1}generateInstanceId(){return typeof window<"u"&&window.crypto&&typeof window.crypto.getRandomValues=="function"?"10000000-1000-4000-8000-100000000000".replace(/[018]/g,i=>{let t=parseInt(i);return(t^crypto.getRandomValues(new Uint8Array(1))[0]&15>>t/4).toString(16)}):"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,i=>{let t=Math.random()*16|0;return(i==="x"?t:t&3|8).toString(16)})}subscribe({topic:i,func:t,runIfAlreadyPublished:n=!1}){if(typeof t!="function")return!1;if(n){for(let o=0;o<this.publishedTopics.length;o++)if(this.publishedTopics[o]===i){t.call(null);break}}let s=(this.uid+=1).toString();return this.topics.push({token:s,topic:i,func:t}),s}unsubscribe({topic:i,token:t}){for(let n=0;n<this.topics.length;n++)if(this.topics[n].token===t&&this.topics[n].topic===i)return this.topics.splice(n,1),!0;return!1}publish({topic:i,data:t}){this.publishedTopics.push(i);for(let n=0;n<this.topics.length;n++)if(this.topics[n].topic===i)try{this.topics[n].func.call(null,t)}catch(s){console.error(`[PubSub] Subscriber error on "${i}":`,s)}}hasPublished(i){return this.publishedTopics.includes(i)}clear(){this.topics=[],this.publishedTopics=[],this.uid=-1}};typeof window<"u"&&(window.PubSub=window.PubSub||new e);var c=e;})();</script>
+
+    <!-- Meta tags (updated on navigation) -->
+    <meta name="ads.channel" content="news"/>
+    <meta name="ads.section" content="home"/>
+    <meta name="ads.zone" content="news"/>
+    <meta name="ads.pagetype" content="index"/>
+    <meta name="ads.geo" content="GB"/>
+    <meta name="ads.articleid" content=""/>
+    <meta name="ads.testkey" content=""/>
+
+    <!-- dataLayer for pr (pageRenderer) -->
+    <script>
+        var dataLayer = {
+            pageName: '',
+            pageType: 'homePageRenderer',
+            pageId: 'test-spa-page',
+            premiumContent: 'false'
+        };
+    </script>
+
+    <!-- Performance baseline -->
+    <script>
+        window.AD_PERF = { loaderType: 'PLUGIN', pageLoadTime: 0, navigations: 0 };
+    </script>
+
+    <!-- Demo CMP Modal -->
+    <style>
+        #cmp-modal { position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999; }
+        #cmp-modal .cmp-box { background:#fff;border-radius:8px;max-width:500px;padding:24px;box-shadow:0 4px 20px rgba(0,0,0,0.3);font-family:Arial,sans-serif; }
+        #cmp-modal h2 { margin:0 0 16px;color:#333; }
+        #cmp-modal p { color:#666;line-height:1.5;margin:0 0 12px; }
+        #cmp-modal ul { color:#666;line-height:1.6;margin:0 0 16px;padding-left:20px; }
+        #cmp-modal .cmp-buttons { display:flex;gap:12px;justify-content:center; }
+        #cmp-modal button { padding:12px 32px;font-size:16px;font-weight:600;border:none;border-radius:6px;cursor:pointer; }
+        #cmp-modal .btn-accept { background:#22c55e;color:#fff; }
+        #cmp-modal .btn-reject { background:#ef4444;color:#fff; }
+    </style>
+
+    <!-- Load PLUGIN LOADER Ad Stack (local build) -->
+    <script src="/dist/proton.min.js" defer></script>
+
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: Georgia, serif; margin: 0; padding: 0; background: #f5f5f5; }
+
+        /* Navigation */
+        .spa-nav {
+            position: sticky; top: 0; background: #1a1a2e; padding: 12px 20px;
+            display: flex; gap: 8px; flex-wrap: wrap; z-index: 1000; align-items: center;
+        }
+        .spa-nav button {
+            padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;
+            font-size: 13px; font-weight: 600; transition: all 0.2s;
+        }
+        .nav-btn { background: #4a4a6a; color: white; }
+        .nav-btn:hover { background: #6a6a8a; }
+        .nav-btn.active { background: #0066cc; }
+        .action-btn { background: #cc6600; color: white; }
+        .action-btn:hover { background: #ff8800; }
+        .nav-label { color: #888; font-size: 11px; margin-right: 5px; }
+        .nav-divider { width: 1px; height: 24px; background: #444; margin: 0 10px; }
+
+        /* Page Content */
+        .page-content {
+            padding: 20px;
+        }
+        .page-header {
+            background: white; padding: 15px 20px; margin-bottom: 15px;
+            border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .page-header h1 { margin: 0 0 8px; font-size: 24px; }
+        .page-meta { color: #666; font-size: 12px; font-family: Arial, sans-serif; }
+        .page-meta span { background: #eee; padding: 2px 6px; border-radius: 3px; margin-right: 6px; }
+
+        /* Article layout */
+        .article-container {
+            display: flex; gap: 25px; background: white; padding: 20px;
+            border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .articleBodyText { flex: 1; min-width: 0; line-height: 1.7; font-size: 17px; }
+        .articleBodyText p { margin-bottom: 1.4em; }
+        .tpl-article__sidebar { width: 300px; flex-shrink: 0; }
+
+        /* Ad slots - header/footer banners */
+        .commercial-unit {
+            background-color: #EEE;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 16px;
+            padding-top: 8px;
+            text-align: center;
+        }
+        .commercial-unit--sidebar {
+            position: sticky; top: 70px;
+            background: #f9f9f9;
+            align-items: center;
+            display: flex;
+            flex-direction: column;
+        }
+        .advert-label {
+            color: #494949;
+            font-family: arial, sans-serif;
+            font-size: 12px;
+            line-height: 8px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .js-advert {
+            text-align: center;
+            width: 100%;
+            background: linear-gradient(135deg, #e8e8e8, #f5f5f5);
+            color: #666;
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .js-advert::before {
+            content: attr(id);
+        }
+        .js-advert[data-ad-type="bin"], .advert--banner {
+            height: 250px;
+            margin-top: 8px;
+        }
+        .js-advert[data-ad-type="mpu"], .advert--mpu {
+            height: 250px;
+            width: 300px;
+        }
+
+        /* Injected ad styling - matching proton.html */
+        .advert-container {
+            text-align: center;
+            margin: 15px 0;
+        }
+        .advert-container.dynamicMpu {
+            background: #fff8e1;
+            border: 2px dashed #ffc107;
+            padding: 8px;
+        }
+        .advert--dyn {
+            min-height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Custom slots - matching proton.html */
+        .advert-container.custom-slot {
+            background: #fff8e1;
+            border: 2px dashed #ffc107;
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Demo CMP Modal -->
+<div id="cmp-modal">
+    <div class="cmp-box">
+        <h2>Demo Consent Manager</h2>
+        <p>This simulates a Consent Management Platform (CMP). Proton is <strong>waiting</strong> for the <code>cmp.ready</code> event before loading partners and requesting ads.</p>
+        <p>Your choice will:</p>
+        <ul>
+            <li>Set <code>dataLayer.consentState</code> to <strong>1</strong> (accept) or <strong>2</strong> (reject)</li>
+            <li>Fire <code>cmp.ready</code> - a general ready signal, not the choice itself</li>
+            <li>Flow to <code>consent.js</code> which returns 'accept' or 'reject' for plugin consent checks</li>
+            <li>Set targeting KVP <code>consentstate=1</code> or <code>consentstate=2</code> for GAM</li>
+        </ul>
+        <p style="color:#888;font-size:13px;margin:16px 0 0;padding-top:12px;border-top:1px solid #eee;">
+            <strong>Tip:</strong> Add <code>?skipCMP=true</code> to simulate a returning user with prior consent. This bypasses the modal and fires <code>cmp.ready</code> immediately - useful for testing ad load performance.
+        </p>
+        <div class="cmp-buttons" style="margin-top:16px;">
+            <button class="btn-accept" onclick="handleConsent(1)">Accept All</button>
+            <button class="btn-reject" onclick="handleConsent(2)">Reject All</button>
+        </div>
+    </div>
+</div>
+<script>
+    (function() {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('skipCMP') === 'true') {
+            window.dataLayer.consentState = 1;
+            window.AD_PERF.pageLoadTime = performance.now();
+            document.getElementById('cmp-modal').style.display = 'none';
+            window.PubSub.publish({ topic: 'cmp.ready' });
+            console.info('[CMP] Skipped via ?skipCMP=true (simulating prior consent)');
+            return;
+        }
+    })();
+
+    function handleConsent(choice) {
+        window.dataLayer.consentState = choice;
+        window.AD_PERF.pageLoadTime = performance.now();
+        console.info('[CMP] Consent choice:', choice === 1 ? 'ACCEPT' : 'REJECT');
+        console.info('[CMP] dataLayer.consentState =', choice);
+        document.getElementById('cmp-modal').style.display = 'none';
+        window.PubSub.publish({ topic: 'cmp.ready' });
+        console.info('[CMP] Published cmp.ready event');
+    }
+</script>
+
+<!-- Navigation -->
+<nav class="spa-nav">
+    <span class="nav-label">Pages:</span>
+    <button class="nav-btn active" onclick="navigateTo('index')">Index</button>
+    <button class="nav-btn" onclick="navigateTo('article1')">News Article</button>
+    <button class="nav-btn" onclick="navigateTo('article2')">Sport Article</button>
+    <button class="nav-btn" onclick="navigateTo('longform')">Longform</button>
+    <div class="nav-divider"></div>
+    <span class="nav-label">Test:</span>
+    <button class="action-btn" onclick="reloadAds()">Reload Ads</button>
+    <button class="action-btn" onclick="checkGPT()">Check GPT</button>
+</nav>
+
+<!-- Page Content Container -->
+<div id="page-container" class="page-content"></div>
+
+<script>
+// Content generator (~300 chars per paragraph - enough to trigger injection)
+const paragraph = `<p>The investigation has revealed significant findings that reshape our understanding of the situation. Officials compiled evidence from multiple sources across different regions, requiring collaboration between numerous agencies. Experts suggest far-reaching implications as universities conduct parallel studies.</p>`;
+
+function generateContent(blocks) {
+    let content = '';
+    for (let i = 0; i < blocks; i++) content += paragraph;
+    return content;
+}
+
+// Page configurations
+const pages = {
+    index: {
+        pagetype: 'index', section: 'home', zone: 'home', articleid: '', testkey: '',
+        html: `
+            <div class="page-header">
+                <h1>Index Page</h1>
+                <div class="page-meta">
+                    <span>pagetype: index</span><span>section: home</span>
+                </div>
+            </div>
+            <div class="commercial-unit">
+                <div class="advert-label">Header Banner</div>
+                <div class="js-advert advert advert--banner" id="advert_siteA_bin_0" data-ad-type="bin" data-adtype="bin"></div>
+            </div>
+            <p style="font-size:15px;line-height:1.6;padding:20px;background:white;border-radius:6px;">Index page - no .articleBodyText, so dynamic injection should NOT occur. Only pre-defined slots are shown.</p>
+            <div class="commercial-unit">
+                <div class="advert-label">Mid Banner</div>
+                <div class="js-advert advert advert--banner" id="advert_siteA_bin_1" data-ad-type="bin" data-adtype="bin"></div>
+            </div>
+        `
+    },
+    article1: {
+        pagetype: 'story', section: 'news', zone: 'news', articleid: 'article-001', testkey: 'news-key', pr: 'storyPageRenderer',
+        html: `
+            <div class="page-header">
+                <h1>News Article</h1>
+                <div class="page-meta">
+                    <span>pagetype: story</span><span>section: news</span>
+                </div>
+            </div>
+            <div class="commercial-unit">
+                <div class="advert-label">Header Banner</div>
+                <div class="js-advert advert advert--banner" id="advert_siteA_bin_0" data-ad-type="bin" data-adtype="bin"></div>
+            </div>
+            <div class="article-container">
+                <div class="articleBodyText section">${generateContent(8)}</div>
+                <div class="tpl-article__sidebar">
+                    <div class="commercial-unit commercial-unit--sidebar">
+                        <div class="advert-label">Sidebar MPU</div>
+                        <div class="js-advert advert advert--mpu" id="advert_siteA_mpu_0" data-ad-type="mpu" data-adtype="mpu"></div>
+                    </div>
+                </div>
+            </div>
+        `
+    },
+    article2: {
+        pagetype: 'story', section: 'sport', zone: 'sport', articleid: 'article-002', testkey: '', pr: 'storyPageRenderer',
+        html: `
+            <div class="page-header">
+                <h1>Sport Article</h1>
+                <div class="page-meta">
+                    <span>pagetype: story</span><span>section: sport</span>
+                </div>
+            </div>
+            <div class="commercial-unit">
+                <div class="advert-label">Header Banner</div>
+                <div class="js-advert advert advert--banner" id="advert_siteA_bin_0" data-ad-type="bin" data-adtype="bin"></div>
+            </div>
+            <div class="article-container">
+                <div class="articleBodyText section">${generateContent(8)}</div>
+                <div class="tpl-article__sidebar">
+                    <div class="commercial-unit commercial-unit--sidebar">
+                        <div class="advert-label">Sidebar MPU</div>
+                        <div class="js-advert advert advert--mpu" id="advert_siteA_mpu_0" data-ad-type="mpu" data-adtype="mpu"></div>
+                    </div>
+                </div>
+            </div>
+        `
+    },
+    longform: {
+        pagetype: 'longform', section: 'sport', zone: 'sport', articleid: 'longform-001', testkey: 'longform-key', pr: 'longFormRenderer',
+        html: `
+            <div class="page-header">
+                <h1>Longform Article</h1>
+                <div class="page-meta">
+                    <span>pagetype: longform</span><span>section: sport</span>
+                </div>
+            </div>
+            <div class="commercial-unit">
+                <div class="advert-label">Header Banner</div>
+                <div class="js-advert advert advert--banner" id="advert_siteA_bin_0" data-ad-type="bin" data-adtype="bin"></div>
+            </div>
+            <div class="article-container">
+                <div class="articleBodyText section">
+                    <h2>Chapter 1</h2>${generateContent(6)}
+                    <h2>Chapter 2</h2>${generateContent(6)}
+                    <h2>Chapter 3</h2>${generateContent(6)}
+                </div>
+                <div class="tpl-article__sidebar">
+                    <div class="commercial-unit commercial-unit--sidebar">
+                        <div class="advert-label">Sidebar MPU</div>
+                        <div class="js-advert advert advert--mpu" id="advert_siteA_mpu_0" data-ad-type="mpu" data-adtype="mpu"></div>
+                    </div>
+                </div>
+            </div>
+        `
+    }
+};
+
+let currentPage = 'index';
+
+// Helpers
+function setMeta(name, val) {
+    const el = document.querySelector(`meta[name="${name}"]`);
+    if (el) el.content = val || '';
+}
+
+// Navigation - the SPA pattern
+function navigateTo(pageName) {
+    const page = pages[pageName];
+    if (!page) return;
+
+    window.AD_PERF.navigations++;
+    console.log(`[SPA] Navigate: ${pageName}`);
+
+    // Clear any existing ad overlays from previous page
+    document.querySelectorAll('.ad-overlay').forEach(el => el.remove());
+
+    // Update nav buttons
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+
+    const p = window.proton;
+    if (p) {
+        // 1. Destroy all slots (handles: GPT, observers, refresh timers, wrapper auctions, containers)
+        p.functions?.destroySlots('all');
+        console.log('[SPA] destroySlots("all")');
+
+        // 2. Cancel any remaining refresh timers
+        p.adRefresh?.cancelAllRefreshes();
+    }
+
+    // 3. Update meta tags and dataLayer (for targeting rebuild)
+    setMeta('ads.pagetype', page.pagetype);
+    setMeta('ads.section', page.section);
+    setMeta('ads.zone', page.zone);
+    setMeta('ads.articleid', page.articleid);
+    setMeta('ads.testkey', page.testkey);
+    if (page.pr) window.dataLayer.pageType = page.pr;
+    console.log(`[SPA] Meta: pt=${page.pagetype}, sec=${page.section}, pr=${page.pr || '(none)'}`);
+
+    // 4. Swap DOM content
+    document.getElementById('page-container').innerHTML = page.html;
+    currentPage = pageName;
+
+    // 5. Request ads (discovers new slots, runs injection, sets up lazy loading)
+    if (p?.requestAds) {
+        requestAnimationFrame(() => {
+            p.requestAds();
+            console.log('[SPA] requestAds()');
+
+            // 6. Re-evaluate partners that didn't load (consent/targeting may have changed)
+            if (p.reevaluatePartners) {
+                p.reevaluatePartners().then(results => {
+                    const loaded = results.filter(r => r.newStatus === 'loaded');
+                    console.log(`[SPA] reevaluate: ${loaded.length}/${results.length} partners loaded`);
+                });
+            }
+        });
+    }
+}
+
+// Reload ads on same page (tests recreate flow)
+function reloadAds() {
+    console.log('[SPA] Reload Ads');
+    // Clear overlays before recreate
+    document.querySelectorAll('.ad-overlay').forEach(el => el.remove());
+    const p = window.proton;
+    if (p?.functions?.recreate) {
+        p.functions.recreate('all');
+        console.log('[SPA] recreate("all")');
+    }
+}
+
+// Check GPT state
+function checkGPT() {
+    if (!window.googletag?.pubads) {
+        console.warn('[SPA] GPT not ready');
+        return;
+    }
+
+    // Page-level targeting
+    console.group('[GPT] Page-Level Targeting');
+    const pageKeys = googletag.pubads().getTargetingKeys() || [];
+    if (pageKeys.length === 0) {
+        console.log('(none)');
+    } else {
+        pageKeys.forEach(k => {
+            const v = googletag.pubads().getTargeting(k);
+            console.log(`${k}=${Array.isArray(v) ? v.join(',') : v}`);
+        });
+    }
+    console.groupEnd();
+
+    // Slot-level targeting
+    const slots = googletag.pubads().getSlots() || [];
+    console.group(`[GPT] Slot-Level Targeting (${slots.length} slots)`);
+    slots.forEach(slot => {
+        const slotId = slot.getSlotElementId();
+        const slotKeys = slot.getTargetingKeys() || [];
+        console.group(slotId);
+        console.log(`AdUnitPath: ${slot.getAdUnitPath()}`);
+        if (slotKeys.length === 0) {
+            console.log('Targeting: (none)');
+        } else {
+            slotKeys.forEach(k => {
+                const v = slot.getTargeting(k);
+                console.log(`${k}=${Array.isArray(v) ? v.join(',') : v}`);
+            });
+        }
+        console.groupEnd();
+    });
+    console.groupEnd();
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('page-container').innerHTML = pages.index.html;
+    console.log('[SPA] Test ready');
+});
+
+// PubSub listeners
+window.PubSub.subscribe({ topic: 'loader.core.ready', func: () => console.log('[SPA] Proton ready') });
+window.PubSub.subscribe({ topic: 'loader.ads.requested', func: () => console.log('[SPA] Ads requested') });
+window.PubSub.subscribe({ topic: 'dynamicInjection.complete', func: (d) => console.log(`[SPA] Injected ${d?.injected || 0} ads`) });
+</script>
+
+<!-- Standard GPT overlay debugger -->
+<script>
+window.googletag = window.googletag || { cmd: [] };
+googletag.cmd.push(function() {
+    googletag.pubads().addEventListener('slotRenderEnded', function(event) {
+        const slot = event.slot;
+        const slotId = slot.getSlotElementId();
+        const adUnitPath = slot.getAdUnitPath();
+        const isEmpty = event.isEmpty;
+        const size = event.size;
+        const creativeId = event.creativeId || 'N/A';
+        const lineItemId = event.lineItemId || 'N/A';
+        const renderTime = performance.now();
+
+        const pageLoadTime = window.AD_PERF.pageLoadTime || 0;
+        const latency = renderTime - pageLoadTime;
+
+        console.table({
+            SlotID: slotId,
+            AdUnitPath: adUnitPath,
+            IsEmpty: isEmpty,
+            Size: size ? `${size[0]}x${size[1]}` : 'N/A',
+            CreativeID: creativeId,
+            LineItemID: lineItemId,
+            RenderTime: `${renderTime.toFixed(2)}ms`,
+            PageLoadTime: `${pageLoadTime.toFixed(2)}ms`,
+            Latency: `${latency.toFixed(2)}ms`
+        });
+
+        // Create a unique overlay for each ad slot
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.bottom = `${10 + document.querySelectorAll('.ad-overlay').length * 150}px`;
+        overlay.style.right = '0';
+        overlay.style.width = '300px';
+        overlay.style.backgroundColor = 'rgba(0, 204, 0, 0.9)';
+        overlay.style.color = 'white';
+        overlay.style.padding = '10px';
+        overlay.style.fontSize = '12px';
+        overlay.style.zIndex = '9999';
+        overlay.className = 'ad-overlay';
+        overlay.innerHTML = `
+            <strong>[PLUGIN]</strong><br>
+            SlotID: ${slotId}<br>
+            Size: ${size ? `${size[0]}x${size[1]}` : 'N/A'}<br>
+            RenderTime: ${renderTime.toFixed(2)}ms<br>
+            PageLoadTime: ${pageLoadTime.toFixed(2)}ms<br>
+            Latency: ${latency.toFixed(2)}ms
+        `;
+        document.body.appendChild(overlay);
+    });
+});
+</script>
+
+</body>
+</html>

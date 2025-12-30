@@ -1,0 +1,180 @@
+{
+  "_comment": "Copy this file to targeting.json. Defines GAM targeting key-values.",
+
+  "normalization": {
+    "_comment": "Controls how targeting values are normalized",
+    "enabled": true,
+    "maxKeyLength": 20,
+    "maxValueLength": 40,
+    "sanitize": false,
+    "trimWhitespace": true
+  },
+
+  "common": {
+    "_comment": "Targeting applied to ALL properties",
+
+    "pageLevel": {
+      "_comment": "Page-level targeting - applied to all slots",
+
+      "vp": {
+        "_comment": "Viewport breakpoint",
+        "source": "internal",
+        "fn": "getBreakpoint"
+      },
+
+      "biw": {
+        "_comment": "Browser inner width",
+        "source": "window",
+        "path": "innerWidth"
+      },
+
+      "bih": {
+        "_comment": "Browser inner height",
+        "source": "window",
+        "path": "innerHeight"
+      },
+
+      "lang": {
+        "_comment": "Browser language",
+        "source": "window",
+        "path": "navigator.language",
+        "transform": "lowercase"
+      },
+
+      "rd": {
+        "_comment": "Referring domain",
+        "source": "window",
+        "path": "location.hostname"
+      },
+
+      "testgroup": {
+        "_comment": "Experiment testgroup",
+        "source": "internal",
+        "fn": "getTestgroup"
+      },
+
+      "test": {
+        "_comment": "Ad test value from URL (?adtest=value) - returns array",
+        "source": "internal",
+        "fn": "getAdTest",
+        "type": "array",
+        "delimiter": ","
+      },
+
+      "prod": {
+        "_comment": "Production environment flag",
+        "source": "internal",
+        "fn": "getIsProduction"
+      },
+
+      "geo": {
+        "_comment": "Example: Fallback chain - tries each source until truthy value found",
+        "sources": [
+          { "source": "window", "path": "user.country" },
+          { "source": "cookie", "key": "geo_country" },
+          { "source": "meta", "key": "geo" },
+          { "source": "static", "value": "unknown" }
+        ]
+      }
+    },
+
+    "slotLevel": {
+      "_comment": "Slot-level targeting - values specific to each slot",
+
+      "div": {
+        "_comment": "Slot DOM ID",
+        "source": "slot",
+        "property": "id"
+      },
+
+      "at": {
+        "_comment": "Ad type (ban, mpu, etc.)",
+        "source": "slot",
+        "property": "adType"
+      },
+
+      "pos": {
+        "_comment": "Position/index of this ad type",
+        "source": "slot",
+        "property": "count"
+      },
+
+      "adcount": {
+        "_comment": "Refresh count for this slot",
+        "source": "slot",
+        "property": "adcount"
+      }
+    }
+  },
+
+  "properties": {
+    "_comment": "Property-specific targeting (merged with common)",
+
+    "siteA": {
+      "_comment": "SiteA-specific targeting keys",
+      "pageLevel": {
+        "sc": {
+          "_comment": "Section/zone from meta tag",
+          "source": "meta",
+          "key": "ads.zone"
+        },
+        "pt": {
+          "_comment": "Page type",
+          "source": "meta",
+          "key": "ads.pagetype"
+        },
+        "userstate": {
+          "_comment": "User login state with value mapping",
+          "source": "window",
+          "path": "siteConfig.user.loginStatus",
+          "mapping": {
+            "anonymous": "anon",
+            "registered": "reg",
+            "subscriber": "sub"
+          },
+          "default": "anon"
+        },
+        "geo": {
+          "_comment": "Geographic targeting",
+          "source": "meta",
+          "key": "ads.geo"
+        }
+      }
+    },
+
+    "siteB": {
+      "_comment": "SiteB-specific targeting keys",
+      "pageLevel": {
+        "sc": {
+          "_comment": "Section from SiteB's meta tag",
+          "source": "meta",
+          "key": "siteb.section"
+        },
+        "pt": {
+          "_comment": "Page type from window object",
+          "source": "window",
+          "path": "siteBPage.type"
+        },
+        "userstate": {
+          "_comment": "User state from SiteB's user object",
+          "source": "internal",
+          "fn": "getSiteBUserState"
+        }
+      }
+    },
+
+    "default": {
+      "_comment": "Fallback for unmatched properties",
+      "pageLevel": {
+        "sc": {
+          "source": "meta",
+          "key": "section"
+        },
+        "pt": {
+          "source": "meta",
+          "key": "pagetype"
+        }
+      }
+    }
+  }
+}

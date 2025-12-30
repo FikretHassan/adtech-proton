@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "targeting.schema.json",
+  "title": "Targeting Configuration",
+  "description": "Ad targeting key-value pair source configuration",
+  "type": "object",
+  "required": ["common"],
+  "additionalProperties": true,
+  "properties": {
+    "normalization": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable targeting value normalization"
+        },
+        "maxKeyLength": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Maximum key length"
+        },
+        "maxValueLength": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Maximum value length"
+        },
+        "sanitize": {
+          "type": "boolean",
+          "description": "Sanitize special characters"
+        },
+        "trimWhitespace": {
+          "type": "boolean",
+          "description": "Trim whitespace from values"
+        }
+      }
+    },
+    "common": {
+      "type": "object",
+      "description": "Targeting keys shared across all properties",
+      "properties": {
+        "pageLevel": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/targetingSource" },
+          "description": "Page-level targeting keys"
+        },
+        "slotLevel": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/targetingSource" },
+          "description": "Slot-level targeting keys"
+        }
+      }
+    },
+    "properties": {
+      "type": "object",
+      "description": "Per-property targeting overrides",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "pageLevel": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/$defs/targetingSource" }
+          },
+          "slotLevel": {
+            "type": "object",
+            "additionalProperties": { "$ref": "#/$defs/targetingSource" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sourceDefinition": {
+      "type": "object",
+      "required": ["source"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["internal", "window", "meta", "url", "cookie", "static", "slot"],
+          "description": "Source type"
+        },
+        "fn": { "type": "string", "description": "Function name (for internal source)" },
+        "path": { "type": "string", "description": "Object path (for window source)" },
+        "key": { "type": "string", "description": "Key name (for meta, url, cookie sources)" },
+        "value": { "type": "string", "description": "Static value (for static source)" },
+        "property": { "type": "string", "description": "Slot property (for slot source)" }
+      }
+    },
+    "targetingSource": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["internal", "window", "meta", "url", "cookie", "static", "slot"],
+          "description": "Source type for this targeting value (single source)"
+        },
+        "sources": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceDefinition" },
+          "description": "Fallback chain - try each source until truthy value found"
+        },
+        "fn": { "type": "string", "description": "Function name (for internal source)" },
+        "path": { "type": "string", "description": "Object path (for window source)" },
+        "key": { "type": "string", "description": "Key name (for meta, url, cookie sources)" },
+        "value": { "type": "string", "description": "Static value (for static source)" },
+        "property": { "type": "string", "description": "Slot property (for slot source)" },
+        "type": {
+          "type": "string",
+          "enum": ["string", "array", "number", "boolean"],
+          "description": "Value type"
+        },
+        "delimiter": { "type": "string", "description": "Delimiter for array values" },
+        "transform": {
+          "type": "string",
+          "enum": ["lowercase", "uppercase", "removeTrailingColon", "trim"],
+          "description": "Transform to apply to value"
+        },
+        "mapping": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Value mapping/translation"
+        },
+        "default": {
+          "type": "string",
+          "description": "Default value when all sources return null/empty"
+        }
+      }
+    }
+  }
+}

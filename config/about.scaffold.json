@@ -1,0 +1,9 @@
+{
+  "name": "proton",
+  "version": "1.0.0",
+  "author": "Fikret Hassan",
+  "credit": "Sean Dillon",
+  "contributors": ["Joshua Sadler", "George Caldwell-Pearce"],
+  "description": "Publisher AdTech Framework",
+  "repository": "https://github.com/FikretHassan/adtech-proton"
+}

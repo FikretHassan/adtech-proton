@@ -1,0 +1,87 @@
+{
+  "_comment": "Slot Rules Scaffold - Copy this structure and customize for your implementation",
+
+  "common": {
+    "rules": [
+      {
+        "_comment": "Match by ad type - applies to all slots with this type",
+        "match": { "adType": "mpu" },
+        "include": { "viewport": ["x", "l"] },
+        "sizes": [[300, 250], [300, 600]],
+        "wrappers": {
+          "prebid": {
+            "bidders": {
+              "ozone": { "placementId": "YOUR_PLACEMENT_ID" },
+              "criteo": true
+            }
+          },
+          "amazonaps": true
+        }
+      },
+      {
+        "_comment": "Same ad type with different viewport targeting",
+        "match": { "adType": "mpu" },
+        "include": { "viewport": ["m", "s", "xs"] },
+        "sizes": [[300, 250]],
+        "wrappers": {
+          "prebid": {
+            "bidders": {
+              "ozone": { "placementId": "YOUR_MOBILE_PLACEMENT_ID" },
+              "criteo": true
+            }
+          },
+          "amazonaps": true
+        }
+      },
+      {
+        "_comment": "Match by exact slot ID",
+        "match": { "slotId": "advert_custom_slot" },
+        "include": { "viewport": ["x", "l"] },
+        "sizes": [[970, 250], [728, 90]],
+        "wrappers": {
+          "prebid": {
+            "bidders": {
+              "ozone": { "placementId": "YOUR_PLACEMENT_ID" }
+            }
+          }
+        }
+      },
+      {
+        "_comment": "Include/exclude targeting with dimensions",
+        "match": { "adType": "ban" },
+        "include": { "viewport": ["x", "l"], "pagetype": ["article"] },
+        "exclude": { "zone": ["puzzles", "games"] },
+        "sizes": [[970, 250], [940, 250]],
+        "wrappers": {
+          "prebid": {
+            "bidders": {
+              "ozone": { "placementId": "YOUR_PLACEMENT_ID" },
+              "criteo": true
+            }
+          },
+          "amazonaps": true
+        }
+      },
+      {
+        "_comment": "Video/outstream slot",
+        "match": { "adType": "dyn" },
+        "sizes": [[300, 250], [320, 50]],
+        "video": true,
+        "wrappers": {
+          "prebid": {
+            "bidders": {
+              "ozone": { "placementId": "YOUR_VIDEO_PLACEMENT_ID" }
+            }
+          }
+        }
+      }
+    ]
+  },
+
+  "properties": {
+    "_comment": "Property-specific overrides - rules here take priority over common",
+    "mysite": {},
+    "dev": {},
+    "default": {}
+  }
+}

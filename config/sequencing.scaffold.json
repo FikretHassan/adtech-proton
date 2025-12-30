@@ -1,0 +1,27 @@
+{
+  "_comment": "Copy this file to sequencing.json. Controls ad slot loading priority.",
+
+  "enabled": true,
+  "prioritySlotTypes": ["oop1"],
+  "priorityTimeout": 2000,
+  "waitForRender": true,
+
+  "rules": [
+    {
+      "_comment": "Rule keys must match keys defined in dimensions.json",
+      "name": "Sensitive Content Sequencing",
+      "description": "When matched, priority slots load first for brand safety",
+      "include": {
+        "pagetype": ["story"],
+        "section": ["news", "politics"]
+      }
+    },
+    {
+      "name": "Homepage Priority",
+      "description": "Priority slots on homepage",
+      "include": {
+        "pagetype": ["index"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "partners.schema.json",
+  "title": "Partners Configuration",
+  "description": "Partner orchestration configuration for timeout management and dependency chains",
+  "type": "object",
+  "required": ["enabled", "blocking", "independent", "nonCore", "defaults"],
+  "additionalProperties": false,
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Enable/disable partner orchestration"
+    },
+    "blocking": {
+      "type": "array",
+      "description": "Partners that must complete in order before GAM (supports dependsOn chains)",
+      "items": { "$ref": "#/$defs/partner" }
+    },
+    "independent": {
+      "type": "array",
+      "description": "Partners required before GAM but with no order between them",
+      "items": { "$ref": "#/$defs/partner" }
+    },
+    "nonCore": {
+      "type": "array",
+      "description": "Partners with no GAM dependency (load independently)",
+      "items": { "$ref": "#/$defs/partner" }
+    },
+    "defaults": {
+      "type": "object",
+      "required": ["universalTimeout", "independentTimeout", "nonCoreTimeout", "minTimeout"],
+      "additionalProperties": false,
+      "properties": {
+        "universalTimeout": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Timeout for blocking partners (ms)"
+        },
+        "independentTimeout": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Shared timeout for independent partners (ms)"
+        },
+        "nonCoreTimeout": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Timeout for non-core partners (ms)"
+        },
+        "minTimeout": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Minimum timeout threshold (ms)"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "partner": {
+      "type": "object",
+      "required": ["name", "active", "description"],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9]*$",
+          "description": "Partner identifier (lowercase alphanumeric). Ready event is auto-derived as plugin.{name}.complete"
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Enable/disable this partner"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of partner purpose"
+        },
+        "dependsOn": {
+          "type": "string",
+          "description": "Name of partner this one depends on (blocking tier only)"
+        },
+        "timeout": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Partner-specific timeout override (ms)"
+        }
+      }
+    }
+  }
+}

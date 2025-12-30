@@ -1,0 +1,30 @@
+{
+  "classes": {
+    "loaded": "is-loaded",
+    "empty": "is-empty"
+  },
+
+  "emptySlots": {
+    "collapse": true,
+    "hideContainer": true,
+    "containerSuffix": "_container"
+  },
+
+  "opacity": {
+    "filled": 1,
+    "empty": 0
+  },
+
+  "pubsub": {
+    "slotRequested": "ads.slot.{slotId}.requested",
+    "firstAdRequested": "ads.firstAdRequested",
+    "slotResponseReceived": "ads.slot.{slotId}.responseReceived",
+    "slotRendered": "ads.slot.{slotId}.rendered",
+    "firstAdRendered": "ads.firstAdRendered",
+    "slotEmpty": "ads.slot.{slotId}.empty"
+  },
+
+  "metrics": {
+    "enabled": true
+  }
+}

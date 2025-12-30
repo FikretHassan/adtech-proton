@@ -1,0 +1,31 @@
+{
+  "_comment": "Copy this file to wrappers.json. Controls header bidding orchestration.",
+  "_note": "timeoutRules use include/exclude with dimension values from dimensions.json",
+
+  "enabled": true,
+
+  "prebid": {
+    "_comment": "Enable Prebid.js wrapper",
+    "enabled": false
+  },
+
+  "amazonaps": {
+    "_comment": "Enable Amazon APS wrapper",
+    "enabled": false
+  },
+
+  "timeout": 2000,
+
+  "timeoutRules": [
+    {
+      "_comment": "Add timeout for all viewports",
+      "include": { "viewport": ["all"] },
+      "add": 0
+    },
+    {
+      "_comment": "Add timeout for specific geos (requires geo dimension)",
+      "include": { "geo": ["au", "nz"] },
+      "add": 200
+    }
+  ]
+}

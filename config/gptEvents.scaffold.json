@@ -1,0 +1,37 @@
+{
+  "_comment": "Copy this file to gptEvents.json. Configures GPT event handling.",
+
+  "classes": {
+    "_comment": "CSS classes applied to ad slots",
+    "loaded": "is-loaded",
+    "empty": "is-empty"
+  },
+
+  "emptySlots": {
+    "_comment": "How to handle slots with no fill",
+    "collapse": true,
+    "hideContainer": true,
+    "containerSuffix": "_container"
+  },
+
+  "opacity": {
+    "_comment": "Opacity values for slot states",
+    "filled": 1,
+    "empty": 0
+  },
+
+  "pubsub": {
+    "_comment": "PubSub event patterns ({slotId} replaced at runtime)",
+    "slotRequested": "ads.slot.{slotId}.requested",
+    "firstAdRequested": "ads.firstAdRequested",
+    "slotResponseReceived": "ads.slot.{slotId}.responseReceived",
+    "slotRendered": "ads.slot.{slotId}.rendered",
+    "firstAdRendered": "ads.firstAdRendered",
+    "slotEmpty": "ads.slot.{slotId}.empty"
+  },
+
+  "metrics": {
+    "_comment": "Performance metrics collection",
+    "enabled": true
+  }
+}

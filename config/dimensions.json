@@ -1,0 +1,50 @@
+{
+  "common": {
+    "url": {
+      "source": "window",
+      "path": "location.pathname",
+      "matchType": "startsWith"
+    },
+
+    "section": {
+      "source": "meta",
+      "key": "section",
+      "transform": "lowercase",
+      "matchType": "exact"
+    },
+
+    "pagetype": {
+      "source": "meta",
+      "key": "pagetype",
+      "matchType": "exact"
+    },
+
+    "geo": {
+      "source": "meta",
+      "key": "geo",
+      "matchType": "exact"
+    },
+
+    "viewport": {
+      "source": "internal",
+      "fn": "sizemapping.getBreakpoint",
+      "matchType": "exact"
+    },
+
+    "renderertype": {
+      "source": "window",
+      "path": "dataLayer.pageType",
+      "matchType": "exact"
+    }
+  },
+
+  "properties": {
+    "default": {
+      "userState": {
+        "source": "static",
+        "value": "anon",
+        "matchType": "exact"
+      }
+    }
+  }
+}

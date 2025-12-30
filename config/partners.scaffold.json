@@ -1,0 +1,53 @@
+{
+  "_comment": "Copy this file to partners.json. Controls partner plugin load orchestration. Ready events are auto-derived as plugin.{name}.complete",
+
+  "enabled": true,
+
+  "blocking": [
+    {
+      "_comment": "Plugins that must complete before ad requests. Each has individual timeout.",
+      "name": "gpt",
+      "timeout": 2000,
+      "active": true,
+      "description": "Google Publisher Tag"
+    },
+    {
+      "name": "headerBidderA",
+      "timeout": 1500,
+      "active": false,
+      "description": "Header bidding wrapper",
+      "dependsOn": "gpt"
+    },
+    {
+      "name": "headerBidderB",
+      "timeout": 1000,
+      "active": false,
+      "description": "Header bidding wrapper"
+    }
+  ],
+
+  "independent": [
+    {
+      "_comment": "Must have before GAM, but no order required. Share independentTimeout.",
+      "name": "audienceProvider",
+      "active": false,
+      "description": "Audience data provider"
+    }
+  ],
+
+  "nonCore": [
+    {
+      "_comment": "No GAM dependency - loads independently. Share nonCoreTimeout.",
+      "name": "analytics",
+      "active": false,
+      "description": "Analytics provider"
+    }
+  ],
+
+  "defaults": {
+    "universalTimeout": 3500,
+    "independentTimeout": 1000,
+    "nonCoreTimeout": 5000,
+    "minTimeout": 500
+  }
+}

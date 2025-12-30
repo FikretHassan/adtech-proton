@@ -1,0 +1,171 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "properties.schema.json",
+  "title": "Properties Configuration",
+  "description": "Multi-property domain mapping and slot configuration",
+  "type": "object",
+  "required": ["common", "properties"],
+  "additionalProperties": true,
+  "properties": {
+    "common": {
+      "type": "object",
+      "description": "Shared configuration across all properties",
+      "required": ["selector"],
+      "additionalProperties": true,
+      "properties": {
+        "selector": {
+          "type": "string",
+          "description": "CSS selector for ad slot discovery"
+        },
+        "observedClass": {
+          "type": "string",
+          "description": "Class added when slot is observed"
+        },
+        "loadedClass": {
+          "type": "string",
+          "description": "Class added when slot is loaded"
+        },
+        "collapseEmptyDivs": {
+          "type": "boolean",
+          "description": "Collapse divs when no ad fills"
+        },
+        "adUnitMappings": {
+          "$ref": "#/$defs/adUnitMappings"
+        }
+      }
+    },
+    "properties": {
+      "type": "object",
+      "description": "Per-property configuration overrides",
+      "additionalProperties": { "$ref": "#/$defs/property" }
+    },
+    "blockedDomains": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Domains where ads should not load"
+    },
+    "urlParams": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "URL parameter mappings for overrides"
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Default values for properties"
+    }
+  },
+  "$defs": {
+    "property": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "domains": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Domain patterns for this property (supports wildcards)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable property description"
+        },
+        "production": {
+          "type": "boolean",
+          "description": "Whether this is a production property"
+        },
+        "prefix": {
+          "type": "string",
+          "description": "Prefix for slot IDs"
+        },
+        "networkId": {
+          "type": "string",
+          "description": "GAM network ID"
+        },
+        "adUnitPath": {
+          "type": "string",
+          "description": "Ad unit path template (supports {site}, {zone} placeholders)"
+        },
+        "testAdUnitPath": {
+          "type": "string",
+          "description": "Ad unit path for test mode"
+        },
+        "ppid": {
+          "oneOf": [
+            { "type": "string" },
+            { "$ref": "#/$defs/ppidConfig" }
+          ],
+          "description": "Publisher Provided ID configuration"
+        },
+        "outOfPageTypes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ad types that are out-of-page"
+        },
+        "injectOOP": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/oopSlot" },
+          "description": "Out-of-page slots to inject"
+        },
+        "adUnitMappings": {
+          "$ref": "#/$defs/adUnitMappings"
+        }
+      }
+    },
+    "ppidConfig": {
+      "type": "object",
+      "required": ["source"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["internal", "window", "cookie"]
+        },
+        "fn": {
+          "type": "string",
+          "description": "Function name for internal source"
+        },
+        "path": {
+          "type": "string",
+          "description": "Path for window source"
+        },
+        "key": {
+          "type": "string",
+          "description": "Key for cookie source"
+        }
+      }
+    },
+    "oopSlot": {
+      "type": "object",
+      "required": ["id", "className", "dataAttributes"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Slot element ID"
+        },
+        "className": {
+          "type": "string",
+          "description": "CSS classes for the slot"
+        },
+        "dataAttributes": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Data attributes for the slot"
+        }
+      }
+    },
+    "adUnitMappings": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "properties": {
+              "static": { "type": "string" }
+            }
+          }
+        ]
+      },
+      "description": "Maps dimension values to ad unit path variables ({site}, {zone}, {pagetype})"
+    }
+  }
+}

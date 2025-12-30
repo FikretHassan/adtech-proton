@@ -1,0 +1,41 @@
+{
+  "x": {
+    "active": true,
+    "offset": -750,
+    "lazy": ["all"],
+    "exempt": [],
+    "exemptTypes": []
+  },
+
+  "l": {
+    "active": true,
+    "offset": -750,
+    "lazy": ["all"],
+    "exempt": [],
+    "exemptTypes": []
+  },
+
+  "m": {
+    "active": true,
+    "offset": -250,
+    "lazy": ["all"],
+    "exempt": [],
+    "exemptTypes": []
+  },
+
+  "s": {
+    "active": true,
+    "offset": -250,
+    "lazy": ["all"],
+    "exempt": [],
+    "exemptTypes": []
+  },
+
+  "xs": {
+    "active": true,
+    "offset": -250,
+    "lazy": ["all"],
+    "exempt": [],
+    "exemptTypes": []
+  }
+}

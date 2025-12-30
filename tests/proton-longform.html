@@ -1,0 +1,355 @@
+
+
+
+<!-- Proton ads code start -->
+<!-- Load Plugin Loader PubSub (window.PubSub) - MUST be first -->
+<script>"use strict";(()=>{var e=class{constructor(){this.instanceId=this.generateInstanceId(),this.topics=[],this.publishedTopics=[],this.uid=-1}generateInstanceId(){return typeof window<"u"&&window.crypto&&typeof window.crypto.getRandomValues=="function"?"10000000-1000-4000-8000-100000000000".replace(/[018]/g,i=>{let t=parseInt(i);return(t^crypto.getRandomValues(new Uint8Array(1))[0]&15>>t/4).toString(16)}):"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,i=>{let t=Math.random()*16|0;return(i==="x"?t:t&3|8).toString(16)})}subscribe({topic:i,func:t,runIfAlreadyPublished:n=!1}){if(typeof t!="function")return!1;if(n){for(let o=0;o<this.publishedTopics.length;o++)if(this.publishedTopics[o]===i){t.call(null);break}}let s=(this.uid+=1).toString();return this.topics.push({token:s,topic:i,func:t}),s}unsubscribe({topic:i,token:t}){for(let n=0;n<this.topics.length;n++)if(this.topics[n].token===t&&this.topics[n].topic===i)return this.topics.splice(n,1),!0;return!1}publish({topic:i,data:t}){this.publishedTopics.push(i);for(let n=0;n<this.topics.length;n++)if(this.topics[n].topic===i)try{this.topics[n].func.call(null,t)}catch(s){console.error(`[PubSub] Subscriber error on "${i}":`,s)}}hasPublished(i){return this.publishedTopics.includes(i)}clear(){this.topics=[],this.publishedTopics=[],this.uid=-1}};typeof window<"u"&&(window.PubSub=window.PubSub||new e);var c=e;})();</script>
+<!-- Performance measurement baseline -->
+<script>
+    window.AD_PERF = { loaderType: 'PLUGIN', pageLoadTime: performance.now() };
+</script>
+<meta name="ads.channel" content="news"/>
+<meta name="ads.businessSegment" content="news"/>
+<meta name="ads.section"/>
+<meta name="ads.zone" content="news"/>
+<meta name="ads.articleid" content="1"/>
+<meta name="ads.pagetype" content="story"/>
+<meta name="ads.level" content="0"/>
+<meta name="ads.otherdata"/>
+<meta name="ads.geo" content="GB">
+<meta name="ads.keywords"/>
+<meta name="site.app" content="false"/>
+<!-- Load Sourcepoint payload -->
+<script>
+    var dataLayer = {
+        pageName:'',
+        pageType: 'longFormRenderer',
+        pageId: 'AlZ6LpQcLmsv',
+        conceptIds: '[]',
+        rollupContentPath: 'portal',
+        videoEmbedded: 'false',
+        videoEmbedCount: '0',
+        premiumContent: 'false',
+        premiumOverride: 'false'
+    };
+</script>
+
+
+    <!-- Load PLUGIN LOADER Ad Stack (local build) -->
+    <script src="/dist/proton.min.js" defer></script>
+
+    <!-- Demo CMP Modal -->
+    <div id="cmp-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;">
+        <div style="background:#fff;border-radius:8px;max-width:500px;padding:24px;box-shadow:0 4px 20px rgba(0,0,0,0.3);font-family:Arial,sans-serif;">
+            <h2 style="margin:0 0 16px;color:#333;">Demo Consent Manager</h2>
+            <p style="color:#666;line-height:1.5;margin:0 0 12px;">
+                This simulates a Consent Management Platform (CMP). Proton is <strong>waiting</strong> for the <code>cmp.ready</code> event before loading partners and requesting ads.
+            </p>
+            <p style="color:#666;line-height:1.5;margin:0 0 16px;">
+                Your choice will:
+            </p>
+            <ul style="color:#666;line-height:1.6;margin:0 0 16px;padding-left:20px;">
+                <li>Set <code>dataLayer.consentState</code> to <strong>1</strong> (accept) or <strong>2</strong> (reject)</li>
+                <li>Fire <code>cmp.ready</code> - a general ready signal, not the choice itself</li>
+                <li>Flow to <code>consent.js</code> which returns 'accept' or 'reject' for plugin consent checks</li>
+                <li>Set targeting KVP <code>consentstate=1</code> or <code>consentstate=2</code> for GAM</li>
+            </ul>
+            <p style="color:#888;font-size:13px;margin:16px 0 0;padding-top:12px;border-top:1px solid #eee;">
+                <strong>Tip:</strong> Add <code>?skipCMP=true</code> to simulate a returning user with prior consent. This bypasses the modal and fires <code>cmp.ready</code> immediately - useful for testing ad load performance.
+            </p>
+            <div style="display:flex;gap:12px;justify-content:center;margin-top:16px;">
+                <button onclick="handleConsent(1)" style="padding:12px 32px;font-size:16px;font-weight:600;border:none;border-radius:6px;cursor:pointer;background:#22c55e;color:#fff;">Accept All</button>
+                <button onclick="handleConsent(2)" style="padding:12px 32px;font-size:16px;font-weight:600;border:none;border-radius:6px;cursor:pointer;background:#ef4444;color:#fff;">Reject All</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('skipCMP') === 'true') {
+                // Simulate returning user with prior consent
+                window.dataLayer.consentState = 1;
+                document.getElementById('cmp-modal').style.display = 'none';
+                window.PubSub.publish({ topic: 'cmp.ready' });
+                console.info('[CMP] Skipped via ?skipCMP=true (simulating prior consent)');
+                return;
+            }
+        })();
+
+        function handleConsent(choice) {
+            window.dataLayer.consentState = choice;
+            console.info('[CMP] Consent choice:', choice === 1 ? 'ACCEPT' : 'REJECT');
+            console.info('[CMP] dataLayer.consentState =', choice);
+            document.getElementById('cmp-modal').style.display = 'none';
+            window.PubSub.publish({ topic: 'cmp.ready' });
+            console.info('[CMP] Published cmp.ready event');
+        }
+    </script>
+
+
+    <!-- 'bin' slot index page Ad placeholder -->
+    <div class="commercial-unit u-full-bleed " data-test="commercial-unit" data-ad-slot-hidden="false" data-ad-slot-id="advert_siteA_bin_0" data-perf="commerical-perf-0">
+
+
+
+        <div class="advert-label" data-test="advert-label">Advertisement</div>
+        <div class="advert advert--banner js-advert" id="advert_siteA_bin_0" data-test="advert"></div>
+
+</div>
+
+    <div class="article-container">
+        <div class="articleBodyText section">
+            <h1> LEAD ASSET</h1>
+    <p>Cupidatat exercitation duis excepteur qui fugiat consectetur pariatur veniam dolor. Dolor do labore est veniam mollit exercitation deserunt. Non commodo excepteur irure enim mollit do. Veniam quis commodo culpa Lorem occaecat enim voluptate. Dolore sint laboris adipisicing aliquip occaecat aliquip laboris.</p>
+
+<p>Magna incididunt eu mollit duis ad pariatur. Amet eiusmod non exercitation id do voluptate. Cupidatat mollit irure irure tempor culpa Lorem enim. Aliqua ea ipsum tempor et. Proident enim laborum proident et eiusmod. Commodo cillum sunt fugiat voluptate non nisi do enim.</p>
+
+<!-- TEST 1: Figure - canInjectAfter=false, canInjectBefore=false, canInjectBetweenSame=true, charValue=200
+     Single figure: can't inject before or after (when adjacent to non-figure).
+     The figure's charValue (200) counts toward the next threshold. -->
+<figure style="background:#ffcdd2;padding:20px;margin:20px 0;border:2px solid #e57373;text-align:center;">
+    <img src="https://picsum.photos/400/200" alt="Test image for exclusion" style="max-width:100%;border-radius:4px;">
+    <figcaption style="margin-top:10px;color:#c62828;font-weight:bold;">FIGURE: canInjectBetweenSame=true (+200 chars)</figcaption>
+</figure>
+
+<p>Aute ut id commodo minim dolor sit eu. Labore nisi sit ex exercitation occaecat esse commodo quis id. Elit excepteur nostrud commodo sit. Deserunt mollit aliquip eiusmod mollit enim cillum.</p>
+
+<!-- TEST 2: Blockquote - canInjectAfter=true, canInjectBefore=false, charValue=150
+     You CAN inject after a blockquote, but NOT before it. -->
+<blockquote style="background:#e3f2fd;padding:20px;margin:20px 0;border-left:4px solid #2196f3;font-style:italic;">
+    <p style="margin:0;color:#1565c0;">"This is a blockquote. Ads CAN appear after me, but NOT before me."</p>
+    <footer style="margin-top:10px;color:#64b5f6;font-size:12px;">BLOCKQUOTE: canInjectAfter=true, canInjectBefore=false (+150 chars)</footer>
+</blockquote>
+
+<p>Sunt amet amet esse voluptate Lorem ea. Aliquip adipisicing officia amet consectetur voluptate amet est. Est elit do eiusmod occaecat voluptate magna deserunt laboris. Elit eu mollit cupidatat officia sit. Ex do sit nostrud cupidatat excepteur sint. Consectetur ad consectetur non fugiat elit. Sit eu ad labore ex.</p>
+
+<p>Cupidatat duis laborum Lorem sint ex nisi aliqua. Fugiat et in dolore dolor do ex et. Magna ut minim non eiusmod aute reprehenderit. Nulla cupidatat sint cillum consectetur ipsum occaecat aute duis. Do esse eu adipisicing non officia dolore esse. Qui ex quis laboris commodo eiusmod dolore.</p>
+
+<!-- TEST 3: Recommended Iframe - canInjectAfter=true, canInjectBefore=true, charValue=300
+     Special element type where ads CAN be injected both before and after. -->
+<div data-recommended-iframe style="background:#e8f5e9;padding:20px;margin:20px 0;border:2px solid #4caf50;text-align:center;">
+    <div style="background:#c8e6c9;padding:40px;border-radius:4px;">
+        <strong style="color:#2e7d32;">RECOMMENDED IFRAME: canInjectAfter=true, canInjectBefore=true (+300 chars)</strong>
+        <p style="margin:10px 0 0;color:#388e3c;font-size:12px;">Ads CAN appear both before AND after this element</p>
+    </div>
+</div>
+
+<p>Magna incididunt eu mollit duis ad pariatur. Amet eiusmod non exercitation id do voluptate. Cupidatat mollit irure irure tempor culpa Lorem enim. Aliqua ea ipsum tempor et. Proident enim laborum proident et eiusmod. Commodo cillum sunt fugiat voluptate non nisi do enim.</p>
+
+<p>Aute ut id commodo minim dolor sit eu. Labore nisi sit ex exercitation occaecat esse commodo quis id. Elit excepteur nostrud commodo sit. Deserunt mollit aliquip eiusmod mollit enim cillum.</p>
+
+<!-- TEST 4: Multiple figures in sequence - demonstrates canInjectBetweenSame
+     3 figures with canInjectBetweenSame=true: ads CAN appear between them
+     But NOT before the first figure or after the last (when adjacent to non-figure) -->
+<figure style="background:#fff3e0;padding:15px;margin:10px 0;border:2px solid #ff9800;text-align:center;">
+    <img src="https://picsum.photos/300/150?1" alt="Gallery image 1" style="max-width:100%;border-radius:4px;">
+    <figcaption style="margin-top:8px;color:#e65100;font-size:11px;">Gallery 1/3 - Ads CAN appear after me (next is also figure)</figcaption>
+</figure>
+<figure style="background:#fff3e0;padding:15px;margin:10px 0;border:2px solid #ff9800;text-align:center;">
+    <img src="https://picsum.photos/300/150?2" alt="Gallery image 2" style="max-width:100%;border-radius:4px;">
+    <figcaption style="margin-top:8px;color:#e65100;font-size:11px;">Gallery 2/3 - Ads CAN appear before/after me (adjacent figures)</figcaption>
+</figure>
+<figure style="background:#fff3e0;padding:15px;margin:10px 0;border:2px solid #ff9800;text-align:center;">
+    <img src="https://picsum.photos/300/150?3" alt="Gallery image 3" style="max-width:100%;border-radius:4px;">
+    <figcaption style="margin-top:8px;color:#e65100;font-size:11px;">Gallery 3/3 - Ads can NOT appear after me (next is paragraph)</figcaption>
+</figure>
+
+<p>Sunt amet amet esse voluptate Lorem ea. Aliquip adipisicing officia amet consectetur voluptate amet est. Est elit do eiusmod occaecat voluptate magna deserunt laboris. Elit eu mollit cupidatat officia sit. Ex do sit nostrud cupidatat excepteur sint. Consectetur ad consectetur non fugiat elit. Sit eu ad labore ex.</p>
+
+<p>Cupidatat duis laborum Lorem sint ex nisi aliqua. Fugiat et in dolore dolor do ex et. Magna ut minim non eiusmod aute reprehenderit. Nulla cupidatat sint cillum consectetur ipsum occaecat aute duis. Do esse eu adipisicing non officia dolore esse. Qui ex quis laboris commodo eiusmod dolore.</p>
+
+</div>
+
+<div class="tpl-article__sidebar " data-js="article-sidebar">
+    <div class="commercial-unit commercial-unit--sidebar  " aria-hidden="true" data-ad-slot-hidden="false" data-ad-slot-id="advert_siteA_mpu" data-perf="commercial-unit-sidebar" data-test="commercial-unit-sidebar">
+        <div class="commercial-unit__content">
+            <div class="advert-label advert-label--sidebar">Advertisement</div>
+            <div class="advert js-advert advert--mpu" id="advert_siteA_mpu"></div>
+        </div>
+    </div>
+</div>
+
+
+
+</div>
+
+<h1> ONWARD JOURNEY 1</h1>
+<p>Cupidatat exercitation duis excepteur qui fugiat consectetur pariatur veniam dolor. Dolor do labore est veniam mollit exercitation deserunt. Non commodo excepteur irure enim mollit do. Veniam quis commodo culpa Lorem occaecat enim voluptate. Dolore sint laboris adipisicing aliquip occaecat aliquip laboris.</p>
+
+<p>Magna incididunt eu mollit duis ad pariatur. Amet eiusmod non exercitation id do voluptate. Cupidatat mollit irure irure tempor culpa Lorem enim. Aliqua ea ipsum tempor et. Proident enim laborum proident et eiusmod. Commodo cillum sunt fugiat voluptate non nisi do enim.</p>
+
+
+    <!-- 'bin' slot index page Ad placeholder -->
+    <div class="commercial-unit u-full-bleed " data-test="commercial-unit" data-ad-slot-hidden="false" data-ad-slot-id="advert_siteA_bin_1" data-perf="commerical-perf-0">
+
+
+
+        <div class="advert-label" data-test="advert-label">Advertisement</div>
+        <div class="advert advert--banner js-advert" id="advert_siteA_bin_1" data-test="advert"></div>
+
+</div>
+
+<h1> ONWARD JOURNEY 2</h1>
+<p>Cupidatat exercitation duis excepteur qui fugiat consectetur pariatur veniam dolor. Dolor do labore est veniam mollit exercitation deserunt. Non commodo excepteur irure enim mollit do. Veniam quis commodo culpa Lorem occaecat enim voluptate. Dolore sint laboris adipisicing aliquip occaecat aliquip laboris.</p>
+
+<p>Magna incididunt eu mollit duis ad pariatur. Amet eiusmod non exercitation id do voluptate. Cupidatat mollit irure irure tempor culpa Lorem enim. Aliqua ea ipsum tempor et. Proident enim laborum proident et eiusmod. Commodo cillum sunt fugiat voluptate non nisi do enim.</p>
+
+    <!-- 'bin' slot index page Ad placeholder -->
+    <div class="commercial-unit u-full-bleed " data-test="commercial-unit" data-ad-slot-hidden="false" data-ad-slot-id="advert_siteA_bin_2" data-perf="commerical-perf-0">
+
+
+
+        <div class="advert-label" data-test="advert-label">Advertisement</div>
+        <div class="advert advert--banner js-advert" id="advert_siteA_bin_2" data-test="advert"></div>
+
+</div>
+
+<h1> FOOTER </h1>
+
+<!-- Proton ads code end -->
+<style>
+    /* Ad slot styles */
+    .advert {
+        height: 0;
+        opacity: 0;
+        overflow: hidden;
+        text-align: center;
+        transition: opacity .75s ease-in-out, height 1s ease;
+        width: 100%;
+    }
+    .advert--banner {
+        align-items: center;
+        box-sizing: content-box;
+        display: flex;
+        justify-content: center;
+        height: 250px;
+        margin-top: 8px;
+        padding-bottom: 8px;
+    }
+    .advert--mpu {
+        height: 250px;
+    }
+    .advert-label {
+        color: #494949;
+        font-family: arial, sans-serif;
+        font-size: 12px;
+        line-height: 8px;
+        margin-bottom: 8px;
+        text-align: center;
+    }
+    .commercial-unit {
+        background-color: #EEE;
+        margin-left: calc(50% - 50vw);
+        margin-right: calc(50% - 50vw);
+        margin-top: 24px;
+        padding-bottom: 16px;
+        padding-top: 8px;
+        width: auto;
+    }
+    .commercial-unit--sidebar {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 0;
+        margin-top: 4px;
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* Layout */
+    .article-container {
+        display: flex;
+        align-items: flex-start;
+    }
+    .articleBodyText {
+        flex: 0 0 70%;
+    }
+    .tpl-article__sidebar {
+        flex: 0 0 30%;
+        position: sticky;
+        top: 0;
+    }
+    .tpl-article__sidebar .commercial-unit--sidebar {
+        margin-top: 20px;
+    }
+</style>
+
+<style>
+    [id="sourcepoint_manage_cookies_link"],
+    [id="sourcepoint_do_not_sell_link"],
+    [id="sourcepoint_about_ads_link"] {
+        position: fixed;
+        bottom: 0px;
+        z-index: 9999999;
+        padding: 12px;
+        right: 0px;
+        background-color: rgb(0, 0, 0);
+        border-radius: 20px;
+        margin: 0px 10px 15px;
+        opacity: 1;
+        font-size: 14px;
+        font-weight: 600;
+        color: rgb(255, 255, 255);
+        font-family: arial, helvetica, sans-serif;
+        width: auto;
+        text-decoration: none;
+    }
+
+    .footer-list-corporate__item {
+        background-color: unset;
+    }
+</style>
+
+<script>
+    window.googletag = window.googletag || { cmd: [] };
+    googletag.cmd.push(function() {
+    googletag.pubads().addEventListener('slotRenderEnded', function(event) {
+        const slot = event.slot;
+        const slotId = slot.getSlotElementId();
+        const adUnitPath = slot.getAdUnitPath();
+        const isEmpty = event.isEmpty;
+        const size = event.size;
+        const creativeId = event.creativeId || 'N/A';
+        const lineItemId = event.lineItemId || 'N/A';
+        const renderTime = performance.now();
+
+        const pageLoadTime = window.AD_PERF.pageLoadTime || 0;
+        const latency = renderTime - pageLoadTime;
+
+        console.table({
+            SlotID: slotId,
+            AdUnitPath: adUnitPath,
+            IsEmpty: isEmpty,
+            Size: size ? `${size[0]}x${size[1]}` : 'N/A',
+            CreativeID: creativeId,
+            LineItemID: lineItemId,
+            RenderTime: `${renderTime.toFixed(2)}ms`,
+            PageLoadTime: `${pageLoadTime.toFixed(2)}ms`,
+            Latency: `${latency.toFixed(2)}ms`
+        });
+
+        // Create a unique overlay for each ad slot
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.bottom = `${10 + document.querySelectorAll('.ad-overlay').length * 150}px`;
+        overlay.style.right = '0';
+        overlay.style.width = '300px';
+        overlay.style.backgroundColor = 'rgba(0, 204, 0, 0.9)';
+        overlay.style.color = 'white';
+        overlay.style.padding = '10px';
+        overlay.style.fontSize = '12px';
+        overlay.style.zIndex = '9999';
+        overlay.className = 'ad-overlay';
+        overlay.innerHTML = `
+            <strong>[PLUGIN]</strong><br>
+            SlotID: ${slotId}<br>
+            Size: ${size ? `${size[0]}x${size[1]}` : 'N/A'}<br>
+            RenderTime: ${renderTime.toFixed(2)}ms<br>
+            PageLoadTime: ${pageLoadTime.toFixed(2)}ms<br>
+            Latency: ${latency.toFixed(2)}ms
+        `;
+        document.body.appendChild(overlay);
+    });
+});
+</script>

@@ -1,0 +1,83 @@
+{
+  "normalization": {
+    "enabled": true,
+    "maxKeyLength": 20,
+    "maxValueLength": 40,
+    "sanitize": false,
+    "trimWhitespace": true
+  },
+
+  "common": {
+    "pageLevel": {
+      "vp": {
+        "source": "internal",
+        "fn": "getBreakpoint"
+      },
+      "biw": {
+        "source": "window",
+        "path": "innerWidth"
+      },
+      "bih": {
+        "source": "window",
+        "path": "innerHeight"
+      },
+      "lang": {
+        "source": "window",
+        "path": "navigator.language",
+        "transform": "lowercase"
+      },
+      "rd": {
+        "source": "window",
+        "path": "location.hostname"
+      },
+      "testgroup": {
+        "source": "internal",
+        "fn": "getTestgroup"
+      },
+      "test": {
+        "source": "internal",
+        "fn": "getAdTest",
+        "type": "array",
+        "delimiter": ","
+      },
+      "prod": {
+        "source": "internal",
+        "fn": "getIsProduction"
+      }
+    },
+
+    "slotLevel": {
+      "div": {
+        "source": "slot",
+        "property": "id"
+      },
+      "at": {
+        "source": "slot",
+        "property": "adType"
+      },
+      "pos": {
+        "source": "slot",
+        "property": "count"
+      },
+      "adcount": {
+        "source": "slot",
+        "property": "adcount"
+      }
+    }
+  },
+
+  "properties": {
+    "default": {
+      "pageLevel": {
+        "sc": {
+          "source": "meta",
+          "key": "section"
+        },
+        "pt": {
+          "source": "meta",
+          "key": "pagetype"
+        }
+      }
+    }
+  }
+}

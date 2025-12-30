@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "lazyload.schema.json",
+  "title": "Lazyload Configuration",
+  "description": "Lazy loading configuration per viewport breakpoint",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": ["active", "offset", "lazy"],
+    "additionalProperties": true,
+    "properties": {
+      "active": {
+        "type": "boolean",
+        "description": "Enable lazy loading for this breakpoint"
+      },
+      "offset": {
+        "type": "number",
+        "description": "Viewport offset in pixels (negative = load before visible)"
+      },
+      "lazy": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Ad types to lazy load ('all' for all types)"
+      },
+      "exempt": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Specific slot IDs exempt from lazy loading"
+      },
+      "exemptTypes": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Ad types exempt from lazy loading"
+      }
+    }
+  }
+}

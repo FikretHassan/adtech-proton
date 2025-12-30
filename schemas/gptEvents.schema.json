@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "gptEvents.schema.json",
+  "title": "GPT Events Configuration",
+  "description": "Google Publisher Tag event handler configuration",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "classes": {
+      "type": "object",
+      "description": "CSS classes to apply on events",
+      "properties": {
+        "loaded": {
+          "type": "string",
+          "description": "Class for loaded slots"
+        },
+        "empty": {
+          "type": "string",
+          "description": "Class for empty slots"
+        }
+      },
+      "additionalProperties": { "type": "string" }
+    },
+    "emptySlots": {
+      "type": "object",
+      "description": "Empty slot handling configuration",
+      "properties": {
+        "collapse": {
+          "type": "boolean",
+          "description": "Collapse empty slots"
+        },
+        "hideContainer": {
+          "type": "boolean",
+          "description": "Hide container on empty"
+        },
+        "containerSuffix": {
+          "type": "string",
+          "description": "Suffix for container element ID"
+        }
+      }
+    },
+    "opacity": {
+      "type": "object",
+      "description": "Opacity settings",
+      "properties": {
+        "filled": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Opacity for filled slots"
+        },
+        "empty": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Opacity for empty slots"
+        }
+      }
+    },
+    "pubsub": {
+      "type": "object",
+      "description": "PubSub topic templates",
+      "additionalProperties": { "type": "string" }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Metrics configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable metrics collection"
+        },
+        "globalPath": {
+          "type": "string",
+          "description": "Global path for metrics object"
+        }
+      }
+    }
+  }
+}

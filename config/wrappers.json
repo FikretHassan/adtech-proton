@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+
+  "prebid": {
+    "enabled": false
+  },
+
+  "amazonaps": {
+    "enabled": false
+  },
+
+  "timeout": 2000,
+
+  "timeoutRules": []
+}

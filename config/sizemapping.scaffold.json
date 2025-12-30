@@ -1,0 +1,65 @@
+{
+  "_comment": "Copy this file to sizemapping.json and configure for your site",
+  "_note": "Breakpoint keys are user-defined. Use any names you want (e.g., 'desktop', 'tablet', 'mobile'). Keys must match across lazyload.json, refresh.json, and wrappers.json.",
+
+  "breakpoints": {
+    "_comment": "Viewport breakpoints - define as many as you need with any key names",
+    "x":  { "minWidth": 1200, "minHeight": 900 },
+    "l":  { "minWidth": 1024, "minHeight": 768 },
+    "m":  { "minWidth": 768, "minHeight": 480 },
+    "s":  { "minWidth": 480, "minHeight": 320 },
+    "xs": { "minWidth": 0, "minHeight": 0 }
+  },
+
+  "adTypes": {
+    "_comment": "Size arrays per ad type per breakpoint. Keys must match breakpoints above.",
+
+    "ban": {
+      "_comment": "Leaderboard banner",
+      "x":  [[970,250], [728,90], "fluid"],
+      "l":  [[970,250], [728,90], "fluid"],
+      "m":  [[728,90], "fluid"],
+      "s":  [[320,50], [300,50], "fluid"],
+      "xs": [[320,50], [300,50], "fluid"]
+    },
+
+    "mpu": {
+      "_comment": "Medium rectangle / half-page",
+      "x":  [[300,600], [300,250], "fluid"],
+      "l":  [[300,600], [300,250], "fluid"],
+      "m":  [[300,250], "fluid"],
+      "s":  [[300,250], "fluid"],
+      "xs": [[300,250], "fluid"]
+    },
+
+    "dyn": {
+      "_comment": "Dynamic in-article slots",
+      "x":  [[300,250], "fluid"],
+      "l":  [[300,250], "fluid"],
+      "m":  [[300,250], "fluid"],
+      "s":  [[300,250], "fluid"],
+      "xs": [[300,250], "fluid"]
+    },
+
+    "oop1": {
+      "_comment": "Out-of-page slot (1x1 for custom creatives)",
+      "x":  [[1,1]],
+      "l":  [[1,1]],
+      "m":  [[1,1]],
+      "s":  [[1,1]],
+      "xs": [[1,1]]
+    }
+  },
+
+  "slotOverrides": {
+    "_comment": "Per-slot size overrides (optional)",
+
+    "advert_YOUR_PREFIX_special_slot": {
+      "x":  [[970,250], [728,90], "fluid"],
+      "l":  [[970,250], [728,90], "fluid"],
+      "m":  [[728,90], "fluid"],
+      "s":  [[300,250], "fluid"],
+      "xs": [[300,250], "fluid"]
+    }
+  }
+}

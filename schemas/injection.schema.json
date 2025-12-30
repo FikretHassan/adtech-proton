@@ -1,0 +1,218 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "injection.schema.json",
+  "title": "Injection Configuration",
+  "description": "Dynamic ad injection into article content",
+  "type": "object",
+  "required": ["enabled"],
+  "additionalProperties": true,
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Enable dynamic ad injection"
+    },
+    "eventPrefix": {
+      "type": "string",
+      "description": "Prefix for injection PubSub events"
+    },
+    "adType": {
+      "type": "string",
+      "description": "Ad type for injected slots"
+    },
+    "slotPrefix": {
+      "type": "string",
+      "description": "Prefix for injected slot IDs"
+    },
+    "containerClass": {
+      "type": "string",
+      "description": "CSS class for injection container"
+    },
+    "adClass": {
+      "type": "string",
+      "description": "CSS class for injected ad element"
+    },
+    "paragraphSelector": {
+      "type": "string",
+      "description": "CSS selector for content paragraphs"
+    },
+    "dataAttributes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Data attributes for injected slots"
+    },
+    "contentElements": {
+      "type": "object",
+      "description": "Per-element injection rules (char mode only). Keys are CSS selectors.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["charValue", "canInjectAfter", "canInjectBefore"],
+        "properties": {
+          "charValue": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Characters this element counts toward threshold"
+          },
+          "canInjectAfter": {
+            "type": "boolean",
+            "description": "Can inject ad directly after this element"
+          },
+          "canInjectBefore": {
+            "type": "boolean",
+            "description": "Can inject ad directly before this element"
+          },
+          "canInjectBetweenSame": {
+            "type": "boolean",
+            "description": "Override: allow injection between adjacent same-type elements"
+          }
+        }
+      }
+    },
+    "defaultLabel": {
+      "type": "object",
+      "description": "Default label config for ad containers",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Label text (e.g., 'Advertisement')"
+        },
+        "class": {
+          "type": "string",
+          "description": "CSS class for label element"
+        },
+        "style": {
+          "type": "object",
+          "description": "Inline styles for label element",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "firstAd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Character count before first ad"
+        },
+        "otherAd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Character count between subsequent ads"
+        },
+        "minParaChars": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Minimum characters per paragraph"
+        },
+        "maxAds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Maximum ads to inject"
+        }
+      }
+    },
+    "modes": {
+      "type": "object",
+      "description": "Injection modes",
+      "additionalProperties": { "$ref": "#/$defs/injectionMode" }
+    }
+  },
+  "$defs": {
+    "injectionMode": {
+      "type": "object",
+      "required": ["active", "match", "contentSelectors", "rules"],
+      "additionalProperties": true,
+      "properties": {
+        "active": {
+          "type": "boolean",
+          "description": "Enable this injection mode"
+        },
+        "countMode": {
+          "type": "string",
+          "enum": ["chars", "blocks"],
+          "default": "chars",
+          "description": "Counting mode: 'chars' (character-based) or 'blocks' (element-based)"
+        },
+        "blockSelector": {
+          "type": "string",
+          "description": "CSS selector for countable blocks (required when countMode is 'blocks')"
+        },
+        "properties": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Properties this mode applies to"
+        },
+        "match": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "description": "Dimension matching criteria"
+        },
+        "contentSelectors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "CSS selectors to find content container"
+        },
+        "rules": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/injectionRule" },
+          "description": "Injection rules for this mode"
+        }
+      }
+    },
+    "injectionRule": {
+      "type": "object",
+      "required": ["match", "config"],
+      "properties": {
+        "match": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "description": "Dimension matching criteria"
+        },
+        "config": {
+          "type": "object",
+          "properties": {
+            "firstAd": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Character count before first ad (chars mode)"
+            },
+            "otherAd": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Character count between subsequent ads (chars mode)"
+            },
+            "firstAdBlock": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Number of blocks before first ad (blocks mode)"
+            },
+            "otherAdBlock": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Number of blocks between subsequent ads (blocks mode)"
+            },
+            "minBlockChars": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Minimum characters for a block to count (blocks mode)"
+            },
+            "maxAds": {
+              "type": "number",
+              "minimum": 0
+            },
+            "placeholders": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    }
+  }
+}

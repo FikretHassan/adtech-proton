@@ -1,0 +1,32 @@
+{
+  "common": {
+    "selector": ".js-advert",
+    "observedClass": "js-advert-observed",
+    "loadedClass": "is-loaded",
+    "collapseEmptyDivs": true,
+    "adUnitMappings": {
+      "site": { "static": "default" },
+      "zone": "section",
+      "pagetype": "pagetype"
+    }
+  },
+
+  "properties": {
+    "default": {
+      "description": "Default fallback",
+      "production": false,
+      "prefix": "advert",
+      "networkId": "12345",
+      "adUnitPath": "/12345/{site}.{zone}/{zone}",
+      "testAdUnitPath": "/12345/test.test/test",
+      "outOfPageTypes": [],
+      "injectOOP": []
+    }
+  },
+
+  "blockedDomains": [],
+  "defaults": {
+    "productionAds": false,
+    "debugMode": false
+  }
+}

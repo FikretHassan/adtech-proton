@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "eventPrefix": "customSlot",
+  "containerClass": "advert-container custom-slot",
+  "adClass": "js-advert advert advert--custom",
+  "dataAttributes": {
+    "data-adtype": "custom",
+    "data-js": "customSlot-ad"
+  },
+  "defaults": {
+    "active": true,
+    "wrapperClass": "",
+    "wrapperStyle": "",
+    "adClass": "",
+    "adStyle": "",
+    "label": {
+      "text": "Advertisement",
+      "class": "advert-label",
+      "style": { "color": "#494949", "fontSize": "12px", "textAlign": "center", "marginBottom": "8px" }
+    }
+  }
+}

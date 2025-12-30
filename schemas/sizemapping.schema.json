@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sizemapping.schema.json",
+  "title": "Sizemapping Configuration",
+  "description": "Responsive ad size mapping by viewport breakpoint. Supports flat structure (backward compatible) or common/properties pattern for multi-property configurations.",
+  "type": "object",
+  "required": ["breakpoints"],
+  "additionalProperties": true,
+  "properties": {
+    "breakpoints": {
+      "type": "object",
+      "description": "Viewport breakpoint definitions (shared across all properties)",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["minWidth", "minHeight"],
+        "properties": {
+          "minWidth": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Minimum viewport width"
+          },
+          "minHeight": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Minimum viewport height"
+          }
+        }
+      }
+    },
+    "adTypes": {
+      "type": "object",
+      "description": "Size mappings per ad type (flat structure, backward compatible)",
+      "additionalProperties": {
+        "$ref": "#/$defs/adTypeSizes"
+      }
+    },
+    "slotOverrides": {
+      "type": "object",
+      "description": "Per-slot size mapping overrides (flat structure, backward compatible)",
+      "additionalProperties": {
+        "$ref": "#/$defs/adTypeSizes"
+      }
+    },
+    "common": {
+      "type": "object",
+      "description": "Common configuration that applies to all properties",
+      "properties": {
+        "adTypes": {
+          "type": "object",
+          "description": "Common size mappings per ad type",
+          "additionalProperties": {
+            "$ref": "#/$defs/adTypeSizes"
+          }
+        },
+        "slotOverrides": {
+          "type": "object",
+          "description": "Common per-slot size mapping overrides",
+          "additionalProperties": {
+            "$ref": "#/$defs/adTypeSizes"
+          }
+        }
+      }
+    },
+    "properties": {
+      "type": "object",
+      "description": "Property-specific configurations that override common settings",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "adTypes": {
+            "type": "object",
+            "description": "Property-specific size mappings per ad type",
+            "additionalProperties": {
+              "$ref": "#/$defs/adTypeSizes"
+            }
+          },
+          "slotOverrides": {
+            "type": "object",
+            "description": "Property-specific per-slot size mapping overrides",
+            "additionalProperties": {
+              "$ref": "#/$defs/adTypeSizes"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "adTypeSizes": {
+      "type": "object",
+      "description": "Sizes per breakpoint for an ad type",
+      "additionalProperties": {
+        "$ref": "#/$defs/sizeList"
+      }
+    },
+    "sizeList": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/size" },
+          "description": "Array of sizes"
+        },
+        {
+          "type": "string",
+          "description": "String size format (e.g., '620x415')"
+        }
+      ]
+    },
+    "size": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "Size as [width, height]"
+        },
+        {
+          "type": "string",
+          "enum": ["fluid"],
+          "description": "Fluid size"
+        }
+      ]
+    }
+  }
+}

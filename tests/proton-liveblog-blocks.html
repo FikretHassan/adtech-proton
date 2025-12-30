@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proton Test - Liveblog Blocks Injection</title>
+</head>
+<body>
+
+<!-- Proton ads code start -->
+<!-- Load Plugin Loader PubSub (window.PubSub) - MUST be first -->
+<script>"use strict";(()=>{var e=class{constructor(){this.instanceId=this.generateInstanceId(),this.topics=[],this.publishedTopics=[],this.uid=-1}generateInstanceId(){return typeof window<"u"&&window.crypto&&typeof window.crypto.getRandomValues=="function"?"10000000-1000-4000-8000-100000000000".replace(/[018]/g,i=>{let t=parseInt(i);return(t^crypto.getRandomValues(new Uint8Array(1))[0]&15>>t/4).toString(16)}):"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,i=>{let t=Math.random()*16|0;return(i==="x"?t:t&3|8).toString(16)})}subscribe({topic:i,func:t,runIfAlreadyPublished:n=!1}){if(typeof t!="function")return!1;if(n){for(let o=0;o<this.publishedTopics.length;o++)if(this.publishedTopics[o]===i){t.call(null);break}}let s=(this.uid+=1).toString();return this.topics.push({token:s,topic:i,func:t}),s}unsubscribe({topic:i,token:t}){for(let n=0;n<this.topics.length;n++)if(this.topics[n].token===t&&this.topics[n].topic===i)return this.topics.splice(n,1),!0;return!1}publish({topic:i,data:t}){this.publishedTopics.push(i);for(let n=0;n<this.topics.length;n++)if(this.topics[n].topic===i)try{this.topics[n].func.call(null,t)}catch(s){console.error(`[PubSub] Subscriber error on "${i}":`,s)}}hasPublished(i){return this.publishedTopics.includes(i)}clear(){this.topics=[],this.publishedTopics=[],this.uid=-1}};typeof window<"u"&&(window.PubSub=window.PubSub||new e);var c=e;})();</script>
+<!-- Performance measurement baseline -->
+<script>
+    window.AD_PERF = { loaderType: 'PLUGIN', pageLoadTime: 0 };
+</script>
+
+<!-- Meta tags for liveblog blocks test -->
+<meta name="ads.channel" content="news"/>
+<meta name="ads.businessSegment" content="news"/>
+<meta name="ads.section" content="live"/>
+<meta name="ads.zone" content="news"/>
+<meta name="ads.articleid" content="liveblog-123"/>
+<meta name="ads.pagetype" content="live"/>
+<meta name="ads.renderertype" content="liveBlogRenderer2025"/>
+<meta name="ads.level" content="0"/>
+<meta name="ads.geo" content="GB">
+<meta name="site.app" content="false"/>
+
+<!-- DataLayer for renderer detection -->
+<script>
+    var dataLayer = {
+        pageName: 'Live Blog Test',
+        pageType: 'liveBlogRenderer2025',
+        pageId: 'liveblog-test-123',
+        conceptIds: '[]',
+        rollupContentPath: 'live',
+        videoEmbedded: 'false',
+        videoEmbedCount: '0',
+        premiumContent: 'false',
+        premiumOverride: 'false'
+    };
+</script>
+
+<!-- Load PLUGIN LOADER Ad Stack (local build) -->
+<script src="/dist/proton.min.js" defer></script>
+
+<!-- Demo CMP Modal -->
+<div id="cmp-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;">
+    <div style="background:#fff;border-radius:8px;max-width:500px;padding:24px;box-shadow:0 4px 20px rgba(0,0,0,0.3);font-family:Arial,sans-serif;">
+        <h2 style="margin:0 0 16px;color:#333;">Demo Consent Manager</h2>
+        <p style="color:#666;line-height:1.5;margin:0 0 12px;">
+            This simulates a Consent Management Platform (CMP). Proton is <strong>waiting</strong> for the <code>cmp.ready</code> event before loading partners and requesting ads.
+        </p>
+        <p style="color:#666;line-height:1.5;margin:0 0 16px;">
+            Your choice will:
+        </p>
+        <ul style="color:#666;line-height:1.6;margin:0 0 16px;padding-left:20px;">
+            <li>Set <code>dataLayer.consentState</code> to <strong>1</strong> (accept) or <strong>2</strong> (reject)</li>
+            <li>Fire <code>cmp.ready</code> - a general ready signal, not the choice itself</li>
+            <li>Flow to <code>consent.js</code> which returns 'accept' or 'reject' for plugin consent checks</li>
+            <li>Set targeting KVP <code>consentstate=1</code> or <code>consentstate=2</code> for GAM</li>
+        </ul>
+        <p style="color:#888;font-size:13px;margin:16px 0 0;padding-top:12px;border-top:1px solid #eee;">
+            <strong>Tip:</strong> Add <code>?skipCMP=true</code> to simulate a returning user with prior consent. This bypasses the modal and fires <code>cmp.ready</code> immediately - useful for testing ad load performance.
+        </p>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:16px;">
+            <button onclick="handleConsent(1)" style="padding:12px 32px;font-size:16px;font-weight:600;border:none;border-radius:6px;cursor:pointer;background:#22c55e;color:#fff;">Accept All</button>
+            <button onclick="handleConsent(2)" style="padding:12px 32px;font-size:16px;font-weight:600;border:none;border-radius:6px;cursor:pointer;background:#ef4444;color:#fff;">Reject All</button>
+        </div>
+    </div>
+</div>
+<script>
+    (function() {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('skipCMP') === 'true') {
+            window.dataLayer.consentState = 1;
+            window.AD_PERF.pageLoadTime = performance.now();
+            document.getElementById('cmp-modal').style.display = 'none';
+            window.PubSub.publish({ topic: 'cmp.ready' });
+            console.info('[CMP] Skipped via ?skipCMP=true (simulating prior consent)');
+            return;
+        }
+    })();
+
+    function handleConsent(choice) {
+        window.dataLayer.consentState = choice;
+        window.AD_PERF.pageLoadTime = performance.now();
+        console.info('[CMP] Consent choice:', choice === 1 ? 'ACCEPT' : 'REJECT');
+        console.info('[CMP] dataLayer.consentState =', choice);
+        document.getElementById('cmp-modal').style.display = 'none';
+        window.PubSub.publish({ topic: 'cmp.ready' });
+        console.info('[CMP] Published cmp.ready event');
+    }
+</script>
+
+
+<!-- Header slot -->
+<div class="commercial-unit u-full-bleed" data-test="commercial-unit" data-ad-slot-hidden="false" data-ad-slot-id="advert_siteA_bin_0" data-perf="commerical-perf-0">
+    <div class="advert-label" data-test="advert-label">Advertisement</div>
+    <div class="advert advert--banner js-advert" id="advert_siteA_bin_0" data-test="advert"></div>
+</div>
+
+<div class="liveblog-container">
+    <h1>LIVE: Breaking News - Block Injection Test</h1>
+    <p class="liveblog-intro">Testing block-based ad injection. Ads should inject after every 3 blocks (firstAdBlock) then every 5 blocks (otherAdBlock) for desktop anonymous users.</p>
+
+    <!-- Live blog content container - matches contentSelectors -->
+    <div class="tpl-live-blog__content" data-content="liveblog-posts">
+
+        <!-- Block 1 -->
+        <div class="live-blog-post" data-post-id="post-1">
+            <div class="post-header">
+                <span class="post-time">14:32</span>
+                <span class="post-author">Reporter One</span>
+            </div>
+            <div class="post-content">
+                <h3>Breaking: Major development in the story</h3>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.</p>
+            </div>
+        </div>
+
+        <!-- Block 2 -->
+        <div class="live-blog-post" data-post-id="post-2">
+            <div class="post-header">
+                <span class="post-time">14:28</span>
+                <span class="post-author">Reporter Two</span>
+            </div>
+            <div class="post-content">
+                <h3>Update from the scene</h3>
+                <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.</p>
+            </div>
+        </div>
+
+        <!-- Block 3 -->
+        <div class="live-blog-post" data-post-id="post-3">
+            <div class="post-header">
+                <span class="post-time">14:25</span>
+                <span class="post-author">Reporter One</span>
+            </div>
+            <div class="post-content">
+                <h3>Witness accounts emerging</h3>
+                <p>Sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.</p>
+            </div>
+        </div>
+
+        <!-- AD SHOULD INJECT AFTER BLOCK 3 (firstAdBlock: 3) -->
+
+        <!-- Block 4 -->
+        <div class="live-blog-post" data-post-id="post-4">
+            <div class="post-header">
+                <span class="post-time">14:20</span>
+                <span class="post-author">Reporter Three</span>
+            </div>
+            <div class="post-content">
+                <h3>Official statement released</h3>
+                <p>Totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+            </div>
+        </div>
+
+        <!-- Block 5 -->
+        <div class="live-blog-post" data-post-id="post-5">
+            <div class="post-header">
+                <span class="post-time">14:15</span>
+                <span class="post-author">Reporter Two</span>
+            </div>
+            <div class="post-content">
+                <h3>Timeline of events</h3>
+                <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione.</p>
+            </div>
+        </div>
+
+        <!-- Block 6 -->
+        <div class="live-blog-post" data-post-id="post-6">
+            <div class="post-header">
+                <span class="post-time">14:10</span>
+                <span class="post-author">Reporter One</span>
+            </div>
+            <div class="post-content">
+                <h3>Expert analysis</h3>
+                <p>Voluptatem sequi nesciunt neque porro quisquam est qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.</p>
+            </div>
+        </div>
+
+        <!-- Block 7 -->
+        <div class="live-blog-post" data-post-id="post-7">
+            <div class="post-header">
+                <span class="post-time">14:05</span>
+                <span class="post-author">Reporter Four</span>
+            </div>
+            <div class="post-content">
+                <h3>Background context</h3>
+                <p>Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur.</p>
+            </div>
+        </div>
+
+        <!-- Block 8 -->
+        <div class="live-blog-post" data-post-id="post-8">
+            <div class="post-header">
+                <span class="post-time">14:00</span>
+                <span class="post-author">Reporter Two</span>
+            </div>
+            <div class="post-content">
+                <h3>Related developments</h3>
+                <p>At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti.</p>
+            </div>
+        </div>
+
+        <!-- AD SHOULD INJECT AFTER BLOCK 8 (3 + 5 = 8, otherAdBlock: 5) -->
+
+        <!-- Block 9 -->
+        <div class="live-blog-post" data-post-id="post-9">
+            <div class="post-header">
+                <span class="post-time">13:55</span>
+                <span class="post-author">Reporter One</span>
+            </div>
+            <div class="post-content">
+                <h3>Community reaction</h3>
+                <p>Quos dolores et quas molestias excepturi sint occaecati cupiditate non provident.</p>
+            </div>
+        </div>
+
+        <!-- Block 10 -->
+        <div class="live-blog-post" data-post-id="post-10">
+            <div class="post-header">
+                <span class="post-time">13:50</span>
+                <span class="post-author">Reporter Three</span>
+            </div>
+            <div class="post-content">
+                <h3>What happens next</h3>
+                <p>Similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga.</p>
+            </div>
+        </div>
+
+        <!-- Block 11 -->
+        <div class="live-blog-post" data-post-id="post-11">
+            <div class="post-header">
+                <span class="post-time">13:45</span>
+                <span class="post-author">Reporter Two</span>
+            </div>
+            <div class="post-content">
+                <h3>Historical perspective</h3>
+                <p>Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio.</p>
+            </div>
+        </div>
+
+        <!-- Block 12 -->
+        <div class="live-blog-post" data-post-id="post-12">
+            <div class="post-header">
+                <span class="post-time">13:40</span>
+                <span class="post-author">Reporter One</span>
+            </div>
+            <div class="post-content">
+                <h3>Further updates expected</h3>
+                <p>Cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est.</p>
+            </div>
+        </div>
+
+        <!-- Block 13 -->
+        <div class="live-blog-post" data-post-id="post-13">
+            <div class="post-header">
+                <span class="post-time">13:35</span>
+                <span class="post-author">Reporter Four</span>
+            </div>
+            <div class="post-content">
+                <h3>Initial report</h3>
+                <p>Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates.</p>
+            </div>
+        </div>
+
+        <!-- AD SHOULD INJECT AFTER BLOCK 13 (8 + 5 = 13) -->
+
+        <!-- Block 14 -->
+        <div class="live-blog-post" data-post-id="post-14">
+            <div class="post-header">
+                <span class="post-time">13:30</span>
+                <span class="post-author">Reporter Two</span>
+            </div>
+            <div class="post-content">
+                <h3>Breaking: First reports</h3>
+                <p>Repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus.</p>
+            </div>
+        </div>
+
+        <!-- Block 15 - Pinned post example -->
+        <div class="pinned-post" data-post-id="post-pinned">
+            <div class="post-header">
+                <span class="post-time">PINNED</span>
+                <span class="post-author">Editor</span>
+            </div>
+            <div class="post-content">
+                <h3>Key Information</h3>
+                <p>This is a pinned post that should also count as a block for injection purposes.</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<h2>FOOTER</h2>
+
+<!-- Proton ads code end -->
+
+<style>
+    /* Ad slot styles */
+    .advert {
+        height: 0;
+        opacity: 0;
+        overflow: hidden;
+        text-align: center;
+        transition: opacity .75s ease-in-out, height 1s ease;
+        width: 100%;
+    }
+    .advert--banner {
+        align-items: center;
+        box-sizing: content-box;
+        display: flex;
+        justify-content: center;
+        height: 250px;
+        margin-top: 8px;
+        padding-bottom: 8px;
+    }
+    .advert--mpu {
+        height: 250px;
+    }
+    .advert-label {
+        color: #494949;
+        font-family: arial, sans-serif;
+        font-size: 12px;
+        line-height: 8px;
+        margin-bottom: 8px;
+        text-align: center;
+    }
+
+    /* Page styles */
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f5f5f5;
+    }
+
+    .liveblog-container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .liveblog-intro {
+        color: #666;
+        font-style: italic;
+        border-left: 3px solid #007bff;
+        padding-left: 15px;
+        margin-bottom: 20px;
+    }
+
+    .tpl-live-blog__content {
+        border-top: 2px solid #eee;
+    }
+
+    .live-blog-post,
+    .pinned-post {
+        padding: 20px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .pinned-post {
+        background: #fff9e6;
+        padding: 20px;
+        margin: 10px 0;
+        border: 2px solid #ffc107;
+        border-radius: 4px;
+    }
+
+    .post-header {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 10px;
+        font-size: 14px;
+    }
+
+    .post-time {
+        font-weight: bold;
+        color: #007bff;
+    }
+
+    .post-author {
+        color: #666;
+    }
+
+    .post-content h3 {
+        margin: 0 0 10px 0;
+        font-size: 18px;
+    }
+
+    .post-content p {
+        margin: 0;
+        color: #333;
+        line-height: 1.6;
+    }
+
+    /* Injected ad styling */
+    .advert-container.dynamicMpu {
+        background: #f0f0f0;
+        border: 2px dashed #007bff;
+        padding: 20px;
+        margin: 20px 0;
+        text-align: center;
+        border-radius: 4px;
+    }
+
+    .advert-container.dynamicMpu::before {
+        content: 'INJECTED AD SLOT';
+        display: block;
+        font-weight: bold;
+        color: #007bff;
+        margin-bottom: 10px;
+    }
+
+    .commercial-unit {
+        background: #f0f0f0;
+        padding: 10px;
+        margin: 10px 0;
+        text-align: center;
+    }
+
+    /* CMP link styling */
+    [id="sourcepoint_manage_cookies_link"],
+    [id="sourcepoint_do_not_sell_link"],
+    [id="sourcepoint_about_ads_link"] {
+        position: fixed;
+        bottom: 0px;
+        z-index: 9999999;
+        padding: 12px;
+        right: 0px;
+        background-color: rgb(0, 0, 0);
+        border-radius: 20px;
+        margin: 0px 10px 15px;
+        opacity: 1;
+        font-size: 14px;
+        font-weight: 600;
+        color: rgb(255, 255, 255);
+        font-family: arial, helvetica, sans-serif;
+        width: auto;
+        text-decoration: none;
+    }
+</style>
+
+<script>
+    // Debug: Log injection events
+    window.PubSub.subscribe({
+        topic: 'injection.liveblogs_blocks.load',
+        func: function(data) {
+            console.log('%c[LIVEBLOG BLOCKS] Mode matched!', 'color: green; font-weight: bold', data);
+        }
+    });
+
+    window.PubSub.subscribe({
+        topic: 'injection.liveblogs_blocks.complete',
+        func: function(data) {
+            console.log('%c[LIVEBLOG BLOCKS] Injection complete!', 'color: blue; font-weight: bold', data);
+            // Highlight injected slots
+            document.querySelectorAll('.advert-container.dynamicMpu').forEach((el, i) => {
+                el.innerHTML = `<strong>INJECTED AD #${i + 1}</strong><br>Slot: ${el.querySelector('.js-advert')?.id || 'unknown'}`;
+            });
+        }
+    });
+
+    // GPT render listener
+    window.googletag = window.googletag || { cmd: [] };
+    googletag.cmd.push(function() {
+        googletag.pubads().addEventListener('slotRenderEnded', function(event) {
+            const slot = event.slot;
+            const slotId = slot.getSlotElementId();
+            const size = event.size;
+            const renderTime = performance.now();
+            const pageLoadTime = window.AD_PERF.pageLoadTime || 0;
+            const latency = renderTime - pageLoadTime;
+
+            console.table({
+                SlotID: slotId,
+                IsEmpty: event.isEmpty,
+                Size: size ? `${size[0]}x${size[1]}` : 'N/A',
+                Latency: `${latency.toFixed(2)}ms`
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

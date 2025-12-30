@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "pauseOnHidden": true,
+  "requireUserActivity": true,
+  "fadeOutDuration": 300,
+
+  "defaults": {
+    "refreshRate": 30000,
+    "refreshCycle": 0
+  },
+
+  "rules": []
+}

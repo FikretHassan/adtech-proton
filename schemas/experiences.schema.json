@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "experiences.schema.json",
+  "title": "Experiences Configuration",
+  "description": "Experience loader global settings",
+  "type": "object",
+  "required": ["enabled"],
+  "additionalProperties": true,
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Enable experience loader"
+    },
+    "executeOn": {
+      "type": "string",
+      "description": "PubSub event to execute experiences on"
+    },
+    "eventPrefix": {
+      "type": "string",
+      "description": "Prefix for experience events"
+    }
+  }
+}

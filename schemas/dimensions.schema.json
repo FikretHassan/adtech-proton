@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "dimensions.schema.json",
+  "title": "Dimensions Configuration",
+  "description": "Dimension function definitions for targeting evaluation",
+  "type": "object",
+  "properties": {
+    "common": {
+      "type": "object",
+      "description": "Dimensions available to all properties",
+      "additionalProperties": { "$ref": "#/$defs/dimension" }
+    },
+    "properties": {
+      "type": "object",
+      "description": "Property-specific dimension overrides",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": { "$ref": "#/$defs/dimension" }
+      }
+    }
+  },
+  "required": ["common"],
+  "additionalProperties": false,
+  "$defs": {
+    "sourceDefinition": {
+      "type": "object",
+      "required": ["source"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["internal", "window", "meta", "static", "cookie", "url"],
+          "description": "Source type for dimension value"
+        },
+        "fn": { "type": "string", "description": "Function name (for internal source)" },
+        "path": { "type": "string", "description": "Object path (for window source)" },
+        "key": { "type": "string", "description": "Key name (for meta, cookie, url sources)" },
+        "value": { "type": "string", "description": "Static value (for static source)" }
+      }
+    },
+    "dimension": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["internal", "window", "meta", "static", "cookie", "url"],
+          "description": "Source type for dimension value (single source)"
+        },
+        "sources": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceDefinition" },
+          "description": "Fallback chain - try each source until truthy value found"
+        },
+        "fn": { "type": "string", "description": "Function name (for internal source)" },
+        "path": { "type": "string", "description": "Object path (for window source)" },
+        "key": { "type": "string", "description": "Key name (for meta, cookie, url sources)" },
+        "value": { "type": "string", "description": "Static value (for static source)" },
+        "matchType": {
+          "type": "string",
+          "enum": ["exact", "startsWith", "endsWith", "contains", "regex"],
+          "description": "How to match dimension values"
+        },
+        "transform": {
+          "type": "string",
+          "enum": ["lowercase", "uppercase", "trim", "removeTrailingColon"],
+          "description": "Transform to apply to value before mapping"
+        },
+        "mapping": {
+          "type": "object",
+          "description": "Map raw values to normalized values",
+          "additionalProperties": { "type": "string" }
+        },
+        "default": {
+          "type": "string",
+          "description": "Default value when all sources return null/empty"
+        }
+      }
+    }
+  }
+}

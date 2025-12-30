@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "prioritySlotTypes": ["oop1"],
+  "priorityTimeout": 2000,
+  "waitForRender": true,
+
+  "rules": []
+}

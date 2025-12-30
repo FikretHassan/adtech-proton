@@ -1,0 +1,83 @@
+{
+  "_comment": "Copy this file to properties.json. Domain matching: exact matches take priority over wildcards. 'default' is the fallback when no domain matches.",
+
+  "common": {
+    "_comment": "Shared settings across all properties",
+    "selector": ".js-advert",
+    "observedClass": "js-advert-observed",
+    "loadedClass": "is-loaded",
+    "collapseEmptyDivs": true,
+    "adUnitMappings": {
+      "site": { "static": "default" },
+      "zone": "section",
+      "pagetype": "pagetype"
+    }
+  },
+
+  "properties": {
+    "_comment": "Property-specific configurations (matched by domain)",
+
+    "mysite": {
+      "_comment": "Production property - wildcards match any subdomain",
+      "domains": ["*.mysite.com"],
+      "description": "My Site - Production",
+      "production": true,
+      "prefix": "mysite",
+      "networkId": "12345",
+      "adUnitPath": "/12345/{site}.{zone}/{zone}",
+      "testAdUnitPath": "/12345/test.test/test",
+      "ppid": { "source": "internal", "fn": "getPPID" },
+      "outOfPageTypes": ["oop", "skin"],
+      "injectOOP": [
+        {
+          "_comment": "Out-of-page slot (e.g., interstitials, skins)",
+          "id": "advert_mysite_oop",
+          "className": "js-advert advert advert--oop",
+          "dataAttributes": {
+            "data-adType": "oop",
+            "data-ad-slot-hidden": "false",
+            "data-ad-slot-id": "advert_mysite_oop"
+          }
+        }
+      ],
+      "adUnitMappings": {
+        "site": { "static": "mysite.main" },
+        "zone": "section",
+        "pagetype": "pagetype"
+      }
+    },
+
+    "dev": {
+      "_comment": "Development environment - exact domain matches take priority over wildcards",
+      "domains": ["localhost", "127.0.0.1", "staging.mysite.com"],
+      "description": "Development",
+      "production": false,
+      "prefix": "mysite",
+      "networkId": "12345",
+      "adUnitPath": "/12345/{site}.{zone}/{zone}",
+      "testAdUnitPath": "/12345/test.test/test",
+      "ppid": { "source": "internal", "fn": "getPPID" },
+      "outOfPageTypes": ["oop", "skin"],
+      "injectOOP": []
+    },
+
+    "default": {
+      "_comment": "Fallback when no domain matches - do not add domains here",
+      "description": "Default fallback",
+      "production": false,
+      "prefix": "advert",
+      "networkId": "12345",
+      "adUnitPath": "/12345/{site}.{zone}/{zone}",
+      "testAdUnitPath": "/12345/test.test/test",
+      "ppid": { "source": "internal", "fn": "getPPID" },
+      "outOfPageTypes": [],
+      "injectOOP": []
+    }
+  },
+
+  "blockedDomains": [],
+  "defaults": {
+    "productionAds": false,
+    "debugMode": false
+  }
+}

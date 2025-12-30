@@ -1,0 +1,49 @@
+{
+  "_comment": "Copy this file to lazyload.json. Controls lazy loading per viewport.",
+  "_note": "Keys must match breakpoint keys you define in sizemapping.json.",
+
+  "x": {
+    "_comment": "Extra large viewport - matches sizemapping breakpoint 'x'",
+    "active": true,
+    "offset": -750,
+    "lazy": ["all"],
+    "exempt": [],
+    "exemptTypes": []
+  },
+
+  "l": {
+    "_comment": "Large viewport - matches sizemapping breakpoint 'l'",
+    "active": true,
+    "offset": -750,
+    "lazy": ["all"],
+    "exempt": [],
+    "exemptTypes": []
+  },
+
+  "m": {
+    "_comment": "Medium viewport - matches sizemapping breakpoint 'm'",
+    "active": true,
+    "offset": -250,
+    "lazy": ["all"],
+    "exempt": [],
+    "exemptTypes": []
+  },
+
+  "s": {
+    "_comment": "Small viewport - matches sizemapping breakpoint 's'",
+    "active": true,
+    "offset": -250,
+    "lazy": ["all"],
+    "exempt": [],
+    "exemptTypes": []
+  },
+
+  "xs": {
+    "_comment": "Extra small viewport - matches sizemapping breakpoint 'xs'",
+    "active": true,
+    "offset": -250,
+    "lazy": ["all"],
+    "exempt": [],
+    "exemptTypes": []
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sequencing.schema.json",
+  "title": "Sequencing Configuration",
+  "description": "Brand safety ad sequencing configuration",
+  "type": "object",
+  "required": ["enabled", "rules"],
+  "additionalProperties": true,
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Enable ad sequencing"
+    },
+    "prioritySlotTypes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Default ad types that load first (priority slots). Can be overridden per-rule."
+    },
+    "prioritySlotIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Default specific slot IDs that load first. Can be overridden per-rule."
+    },
+    "priorityTimeout": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Default timeout for priority slots in ms. Can be overridden per-rule."
+    },
+    "waitForRender": {
+      "type": "boolean",
+      "description": "Wait for priority slot to render before auctions"
+    },
+    "rules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/sequencingRule" },
+      "description": "Sequencing rules"
+    }
+  },
+  "$defs": {
+    "sequencingRule": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Rule name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Rule description"
+        },
+        "properties": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Property IDs this rule applies to. If omitted or empty, applies to all properties."
+        },
+        "include": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "description": "Dimension values to include (keys from dimensions.json)"
+        },
+        "exclude": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "description": "Dimension values to exclude"
+        },
+        "prioritySlotTypes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ad types that load first for this rule. Overrides global prioritySlotTypes."
+        },
+        "prioritySlotIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Specific slot IDs that load first for this rule. Overrides global prioritySlotIds."
+        },
+        "priorityTimeout": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Timeout for priority slots in ms for this rule. Overrides global priorityTimeout."
+        }
+      }
+    }
+  }
+}

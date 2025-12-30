@@ -1,0 +1,60 @@
+{
+  "name": "proton",
+  "version": "1.0.0",
+  "description": "Publisher AdTech Framework",
+  "main": "dist/proton.min.js",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "validate:config": "node scripts/validate-config.js",
+    "build": "node scripts/build.js prod",
+    "build:dev": "node scripts/build.js dev",
+    "build:esm": "node scripts/build.js esm",
+    "build:pubsub": "node scripts/build.js pubsub",
+    "build:pubsub:dev": "node scripts/build.js pubsub:dev",
+    "build:all": "node scripts/build.js all",
+    "serve": "npx serve . -l 3000",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FikretHassan/adtech-proton.git"
+  },
+  "keywords": [
+    "adtech",
+    "advertising",
+    "gpt",
+    "prebid",
+    "header-bidding",
+    "publisher"
+  ],
+  "author": "Fikret Hassan",
+  "contributors": [
+    "Sean Dillon",
+    "George Caldwell-Pearce",
+    "Joshua Sadler"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/FikretHassan/adtech-proton/issues"
+  },
+  "homepage": "https://github.com/FikretHassan/adtech-proton#readme",
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@typescript-eslint/eslint-plugin": "^8.50.1",
+    "@typescript-eslint/parser": "^8.50.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "ajv": "^8.12.0",
+    "esbuild": "^0.19.0",
+    "eslint": "^9.39.2",
+    "jsdom": "^27.3.0",
+    "typescript": "^5.3.0",
+    "typescript-eslint": "^8.50.1",
+    "vitest": "^3.2.4"
+  }
+}

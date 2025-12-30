@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "customSlots.schema.json",
+  "title": "Custom Slots Configuration",
+  "description": "Custom slot injection global settings",
+  "type": "object",
+  "required": ["enabled"],
+  "additionalProperties": true,
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Enable custom slot injection"
+    },
+    "executeOn": {
+      "type": "string",
+      "description": "PubSub event to execute on"
+    },
+    "eventPrefix": {
+      "type": "string",
+      "description": "Prefix for custom slot events"
+    },
+    "slotPrefix": {
+      "type": "string",
+      "description": "Prefix for custom slot IDs"
+    },
+    "containerClass": {
+      "type": "string",
+      "description": "CSS class for slot container"
+    },
+    "adClass": {
+      "type": "string",
+      "description": "CSS class for ad element"
+    },
+    "dataAttributes": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Data attributes for custom slots"
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "active": {
+          "type": "boolean",
+          "description": "Default active state"
+        },
+        "wrapperClass": {
+          "type": "string",
+          "description": "Default wrapper CSS class"
+        },
+        "style": {
+          "type": "string",
+          "description": "Default inline styles"
+        }
+      }
+    }
+  }
+}

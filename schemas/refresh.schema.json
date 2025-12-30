@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "refresh.schema.json",
+  "title": "Refresh Configuration",
+  "description": "Ad refresh configuration using dimension-based targeting",
+  "type": "object",
+  "required": ["enabled", "defaults", "rules"],
+  "additionalProperties": true,
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Enable ad refresh globally"
+    },
+    "pauseOnHidden": {
+      "type": "boolean",
+      "description": "Pause refresh when tab is hidden"
+    },
+    "requireUserActivity": {
+      "type": "boolean",
+      "description": "Only refresh when user is active"
+    },
+    "fadeOutDuration": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Fade out duration in ms before refresh"
+    },
+    "defaults": {
+      "type": "object",
+      "required": ["refreshRate", "refreshCycle"],
+      "properties": {
+        "refreshRate": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Default refresh interval in ms"
+        },
+        "refreshCycle": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Number of refresh cycles (0 = unlimited)"
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "description": "Refresh rules using dimension targeting",
+      "items": { "$ref": "#/$defs/refreshRule" }
+    }
+  },
+  "$defs": {
+    "refreshRule": {
+      "type": "object",
+      "required": ["include"],
+      "additionalProperties": true,
+      "properties": {
+        "properties": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Property IDs this rule applies to. If omitted or empty, applies to all properties. Use 'all' to explicitly match all."
+        },
+        "include": {
+          "type": "object",
+          "description": "Dimension values to include (from dimensions.json)",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "exclude": {
+          "type": "object",
+          "description": "Dimension values to exclude",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "adType": {
+          "type": "string",
+          "description": "Ad type this rule applies to (only slots with this ad type will refresh)"
+        },
+        "slotIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Specific slot IDs this rule applies to (if omitted, applies to all slots matching adType)"
+        },
+        "refreshRate": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Refresh interval in ms"
+        },
+        "refreshCycle": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Max refresh cycles (0 = unlimited)"
+        },
+        "slotVisibleThreshold": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 1.0,
+          "description": "Visibility threshold (0.5 to 1.0) - percentage of slot that must be visible. Default: 0.5 (50%)"
+        }
+      }
+    }
+  }
+}

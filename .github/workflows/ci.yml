@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (generates required files)
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Test with coverage
+        run: npm run test:coverage
+
+      - name: Check bundle size
+        run: |
+          SIZE=$(stat -f%z dist/proton.min.js 2>/dev/null || stat -c%s dist/proton.min.js)
+          SIZE_KB=$((SIZE / 1024))
+          echo "Bundle size: ${SIZE_KB}KB"
+          if [ $SIZE_KB -gt 200 ]; then
+            echo "FAIL: Bundle size exceeds 200KB limit"
+            exit 1
+          fi
+          echo "PASS: Bundle size within limit"

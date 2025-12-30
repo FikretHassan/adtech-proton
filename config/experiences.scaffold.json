@@ -1,0 +1,7 @@
+{
+  "_comment": "Copy this file to experiences.json. Global settings for experience loader.",
+  "_note": "Individual experiences are defined in config/experiences/*.js (see example.scaffold.js).",
+
+  "enabled": true,
+  "eventPrefix": "experience"
+}

@@ -1,0 +1,101 @@
+{
+  "_comment": "Copy this file to dimensions.json. Dimensions are used for include/exclude targeting in plugins, experiences, and wrappers.",
+
+  "common": {
+    "_comment": "Dimensions available to all properties",
+
+    "url": {
+      "_comment": "Match by URL path",
+      "source": "window",
+      "path": "location.pathname",
+      "matchType": "startsWith"
+    },
+
+    "section": {
+      "_comment": "Match by site section/zone with transform and mapping",
+      "source": "meta",
+      "key": "your-section-meta-tag",
+      "transform": "lowercase",
+      "mapping": {
+        "uk-news": "news",
+        "us-news": "news",
+        "world-news": "news"
+      },
+      "matchType": "exact"
+    },
+
+    "pagetype": {
+      "_comment": "Match by page type (index, story, gallery, etc.)",
+      "source": "meta",
+      "key": "your-pagetype-meta-tag",
+      "matchType": "exact"
+    },
+
+    "geo": {
+      "_comment": "Match by geography - REQUIRED for timeoutModifyGeo in wrappers.json",
+      "source": "meta",
+      "key": "your-geo-meta-tag",
+      "matchType": "exact"
+    },
+
+    "viewport": {
+      "_comment": "Match by viewport size (xs, s, m, l, x) - from sizemapping breakpoints",
+      "source": "internal",
+      "fn": "sizemapping.getBreakpoint",
+      "matchType": "exact"
+    },
+
+    "geoCookie": {
+      "_comment": "Example: Read geo from cookie",
+      "source": "cookie",
+      "key": "user_country",
+      "matchType": "exact"
+    },
+
+    "testMode": {
+      "_comment": "Example: Read from URL param (?testMode=value)",
+      "source": "url",
+      "key": "testMode",
+      "matchType": "exact"
+    },
+
+    "userGeo": {
+      "_comment": "Example: Fallback chain - tries each source until truthy value found",
+      "sources": [
+        { "source": "window", "path": "user.country" },
+        { "source": "cookie", "key": "geo_country" },
+        { "source": "meta", "key": "geo" },
+        { "source": "static", "value": "unknown" }
+      ],
+      "matchType": "exact"
+    }
+  },
+
+  "properties": {
+    "_comment": "Property-specific dimensions override or extend common dimensions",
+
+    "your-property": {
+      "userState": {
+        "_comment": "Property-specific user state from window path with value mapping",
+        "source": "window",
+        "path": "user.loginStatus",
+        "matchType": "exact",
+        "mapping": {
+          "anonymous": "anon",
+          "registered": "reg",
+          "subscriber": "sub"
+        },
+        "default": "anon"
+      }
+    },
+
+    "default": {
+      "_comment": "Fallback dimensions when property doesn't match",
+      "userState": {
+        "source": "static",
+        "value": "anon",
+        "matchType": "exact"
+      }
+    }
+  }
+}

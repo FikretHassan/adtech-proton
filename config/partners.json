@@ -1,0 +1,24 @@
+{
+  "enabled": true,
+
+  "blocking": [
+  ],
+
+  "independent": [],
+
+  "nonCore": [
+    {
+      "name": "gpt",
+      "timeout": 2000,
+      "active": true,
+      "description": "Google Publisher Tag"
+    }
+  ],
+
+  "defaults": {
+    "universalTimeout": 3500,
+    "independentTimeout": 1000,
+    "nonCoreTimeout": 5000,
+    "minTimeout": 500
+  }
+}

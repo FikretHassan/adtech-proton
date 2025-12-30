@@ -1,0 +1,49 @@
+{
+  "_comment": "Copy this file to refresh.json. Controls ad refresh behavior.",
+  "_note": "Rules use include/exclude with dimension values from dimensions.json. The adType filters which ad types refresh. Use slotIds to target specific slots within an adType. Use properties to limit to specific properties.",
+
+  "enabled": true,
+  "pauseOnHidden": true,
+  "requireUserActivity": true,
+  "fadeOutDuration": 300,
+
+  "defaults": {
+    "_comment": "Default refresh settings when no rule matches",
+    "refreshRate": 30000,
+    "refreshCycle": 0
+  },
+
+  "rules": [
+    {
+      "_comment": "Sticky bin - only refresh bin_1, requires 100% visibility",
+      "properties": ["mysite", "dev"],
+      "include": { "pagetype": ["story"], "viewport": ["x", "l"] },
+      "adType": "bin",
+      "slotIds": ["advert_mysite_bin_1"],
+      "refreshRate": 15000,
+      "refreshCycle": 0,
+      "slotVisibleThreshold": 1.0
+    },
+    {
+      "_comment": "Desktop MPU refresh on story pages (all MPUs)",
+      "include": { "pagetype": ["story"], "viewport": ["x", "l"] },
+      "adType": "mpu",
+      "refreshRate": 30000,
+      "refreshCycle": 0
+    },
+    {
+      "_comment": "Mobile banner refresh on story pages",
+      "include": { "pagetype": ["story"], "viewport": ["m", "s", "xs"] },
+      "adType": "ban",
+      "refreshRate": 30000,
+      "refreshCycle": 2
+    },
+    {
+      "_comment": "Homepage banner - limited cycles, all viewports",
+      "include": { "pagetype": ["index"], "viewport": ["all"] },
+      "adType": "ban",
+      "refreshRate": 30000,
+      "refreshCycle": 1
+    }
+  ]
+}

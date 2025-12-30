@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "wrappers.schema.json",
+  "title": "Wrappers Configuration",
+  "description": "Header bidding wrapper orchestration configuration",
+  "type": "object",
+  "required": ["enabled"],
+  "additionalProperties": true,
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "description": "Enable wrapper auctions"
+    },
+    "timeout": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Base auction timeout in ms"
+    },
+    "timeoutRules": {
+      "type": "array",
+      "description": "Timeout modifier rules using dimension targeting",
+      "items": { "$ref": "#/$defs/timeoutRule" }
+    }
+  },
+  "$defs": {
+    "timeoutRule": {
+      "type": "object",
+      "required": ["include", "add"],
+      "additionalProperties": true,
+      "properties": {
+        "include": {
+          "type": "object",
+          "description": "Dimension values to match (from dimensions.json)",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "exclude": {
+          "type": "object",
+          "description": "Dimension values to exclude",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "add": {
+          "type": "number",
+          "description": "Milliseconds to add to base timeout when rule matches"
+        }
+      }
+    },
+    "wrapperConfig": {
+      "type": "object",
+      "description": "Configuration for a wrapper adapter",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable this wrapper"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}
