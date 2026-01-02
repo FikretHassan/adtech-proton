@@ -19,8 +19,8 @@ export function registerAdapters() {
   // Register adapters here when configured
 }
 
-// Auto-register on import
-registerAdapters();
+// NOTE: registerAdapters() is called explicitly from entry.ts after PubSub setup
+// This ensures experimentalPubsub works correctly (subscriptions use the right instance)
 
 // Legacy exports (backward compatibility)
 export default {

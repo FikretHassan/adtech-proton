@@ -108,7 +108,7 @@ vi.mock('../src/environment', () => ({ __esModule: true, default: mockEnvironmen
 vi.mock('../src/sizemapping', () => ({ __esModule: true, default: { init: vi.fn(), getBreakpoint: vi.fn(() => 'l'), getSizesForSlot: vi.fn(() => []) } }));
 vi.mock('../src/adTargeting', () => ({ __esModule: true, default: mockAdTargeting, registerInternal: mockAdTargeting.registerInternal }));
 vi.mock('../src/gptEvents', () => ({ __esModule: true, default: { init: vi.fn() } }));
-vi.mock('../src/optional/wrapperAuctions', () => ({ __esModule: true, default: { init: vi.fn(), updateContext: vi.fn() } }));
+vi.mock('../src/optional/wrapperAuctions', () => ({ __esModule: true, default: { init: vi.fn(), updateContext: vi.fn() }, registerAdapters: vi.fn() }));
 vi.mock('../src/functions', () => ({ __esModule: true, default: { init: vi.fn() } }));
 vi.mock('../src/optional/customSlots', () => ({ __esModule: true, default: { init: vi.fn(), inject: vi.fn(() => []), processInjectedSlots: vi.fn() } }));
 vi.mock('../src/optional/injection', () => ({ __esModule: true, default: { init: vi.fn(), injectAds: vi.fn(() => ({ injected: 0, slots: [] })), processInjectedSlots: vi.fn() } }));

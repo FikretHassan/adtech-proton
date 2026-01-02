@@ -153,10 +153,6 @@ export class PubSub {
 
 }
 
-// Auto-create global instance (order-independent)
-if (typeof window !== 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (window as any).PubSub = (window as any).PubSub || new PubSub();
-}
+// PubSub setup is handled by entry.ts (supports experimentalPubsub)
 
 export default PubSub;
