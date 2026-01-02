@@ -34,6 +34,7 @@ interface AppliedRecord {
 
 // Constructor config interface
 interface ExperimentManagerConfig {
+  testgroup?: number;
   getContext?: () => any;
   dimensionConfig?: any;
 }
@@ -50,6 +51,7 @@ export class ExperimentManager {
 
   /**
    * @param {Object} config
+   * @param {number} config.testgroup - External testgroup (0-99), if not provided one is generated
    * @param {Function} config.getContext - Function to get current targeting context
    * @param {Object} config.dimensionConfig - Dimension match type configuration
    */
@@ -59,7 +61,8 @@ export class ExperimentManager {
     this.experiments = [];
     this.applied = {};
 
-    this.testgroup = this._generateTestgroup();
+    // Use provided testgroup or generate one
+    this.testgroup = config.testgroup ?? this._generateTestgroup();
   }
 
   /**

@@ -21,6 +21,7 @@ All configuration files for the plugin loader. JSON files are imported at build 
 - [config/dimensions.json](#configdimensionsjson)
 - [config/hooks.js](#confighooksjs)
 - [config/experiences.json](#configexperiencesjson)
+- [config-tms/ (TMS Build)](#config-tms-tms-build)
 
 ---
 
@@ -1098,3 +1099,71 @@ config/hooks/
 ```
 
 See `config/hooks/demoHooks.js` for a complete example of hooks at every lifecycle point.
+
+---
+
+## config-tms/ (TMS Build)
+
+Separate configuration folder for the Tag Manager build. The TMS build excludes all ad-related modules (GPT, slots, targeting, refresh, injection, wrappers, experiments).
+
+```
+config-tms/
+├── partners.json         # Orchestration config
+└── partners/
+    ├── index.js          # Partner exports
+    └── mypartner.js      # Partner definitions
+```
+
+### config-tms/partners.json
+
+Simplified orchestration config. Most TMS use cases only need nonCore partners:
+
+```json
+{
+  "enabled": true,
+  "blocking": [],
+  "independent": [],
+  "nonCore": [
+    { "name": "analytics", "active": true, "timeout": 2000 }
+  ],
+  "defaults": {
+    "universalTimeout": 1000,
+    "independentTimeout": 1000,
+    "nonCoreTimeout": 5000,
+    "minTimeout": 500
+  }
+}
+```
+
+### config-tms/partners/index.js
+
+```javascript
+export { default as analytics } from './analytics.js';
+```
+
+### Partner Definition
+
+Same structure as main config partners. See `config/partners/_scaffold.js` for all options:
+
+```javascript
+// config-tms/partners/analytics.js
+export default {
+  name: 'analytics',
+  active: true,
+  url: 'https://example.com/analytics.js',
+  timeout: 2000,
+  properties: ['all'],
+  domains: ['all'],
+  consentState: [],
+  include: { pagetype: ['all'], viewport: ['all'] },
+  exclude: {},
+  preloadFn: function() {},
+  onloadFn: function() {}
+};
+```
+
+**Build commands:**
+```bash
+npm run proton:tms        # Production build
+npm run proton:tms:dev    # Development build
+```

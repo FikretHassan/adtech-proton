@@ -306,35 +306,118 @@ export function resolveSlotConfig(
 }
 
 /**
+ * Find ALL matching rules for a slot + wrapper + context
+ * Used for additive bidder merging (e.g., Prebid where multiple rules can contribute bidders)
+ *
+ * @param slotId - Slot ID to match
+ * @param wrapperName - Wrapper name to check in rule's wrappers
+ * @param context - Auction context for targeting evaluation
+ * @returns Array of matching rules
+ */
+export function findAllMatchingRules(
+  slotId: string,
+  wrapperName: string,
+  context: Partial<AuctionContext> = {}
+): SlotRule[] {
+  const rules = getResolvedRules();
+  const evalContext = buildContext(context);
+  const matchedRules: SlotRule[] = [];
+
+  for (const rule of rules) {
+    // 1. Check slot match
+    if (!matchesSlot(slotId, rule.match)) {
+      continue;
+    }
+
+    // 2. Check wrapper is in this rule
+    if (!rule.wrappers || !(wrapperName in rule.wrappers)) {
+      continue;
+    }
+
+    // Wrapper explicitly disabled
+    if (rule.wrappers[wrapperName] === false) {
+      continue;
+    }
+
+    // 3. Evaluate include/exclude targeting
+    const result = evaluateTargeting(
+      rule.include || {},
+      rule.exclude || {},
+      evalContext,
+      generatedDimensionConfig as any
+    );
+
+    if (result.matched) {
+      log(`Rule matched for "${slotId}" + "${wrapperName}"`, {
+        match: rule.match,
+        include: rule.include,
+        exclude: rule.exclude,
+        context: evalContext
+      });
+      matchedRules.push(rule);
+    }
+  }
+
+  if (matchedRules.length === 0) {
+    log(`No rule matched for "${slotId}" + "${wrapperName}"`, { context: evalContext });
+  }
+
+  return matchedRules;
+}
+
+/**
  * Resolve slot configuration for Prebid specifically
- * Returns bidder configs in addition to standard config
+ * Finds ALL matching rules and merges their bidders together
+ * This allows separate rules for different bidders (e.g., Teads with geo conditions)
  *
  * @param slotId - Slot ID
  * @param context - Auction context
- * @returns Resolved config with bidders or null
+ * @returns Resolved config with merged bidders or null
  */
 export function resolveSlotConfigForPrebid(
   slotId: string,
   context: Partial<AuctionContext> = {}
 ): ResolvedPrebidConfig | null {
-  const rule = findMatchingRule(slotId, 'prebid', context);
-  if (!rule) {
+  const matchedRules = findAllMatchingRules(slotId, 'prebid', context);
+  if (matchedRules.length === 0) {
     return null;
   }
 
-  const prebidConfig = rule.wrappers.prebid;
-  if (!prebidConfig || typeof prebidConfig !== 'object') {
+  // Use first rule for sizes/video (they should be consistent across rules for same slot)
+  const primaryRule = matchedRules[0];
+  const sizes = resolveSizes(primaryRule);
+
+  // Merge bidders from all matching rules
+  const mergedBidders: Record<string, true | Record<string, unknown>> = {};
+  let hasVideo = false;
+
+  for (const rule of matchedRules) {
+    const prebidConfig = rule.wrappers.prebid;
+    if (prebidConfig && typeof prebidConfig === 'object') {
+      const bidders = (prebidConfig as PrebidWrapperConfig).bidders || {};
+      for (const [bidderName, bidderConfig] of Object.entries(bidders)) {
+        mergedBidders[bidderName] = bidderConfig;
+      }
+    }
+    if (rule.video) {
+      hasVideo = true;
+    }
+  }
+
+  if (Object.keys(mergedBidders).length === 0) {
     return null;
   }
 
-  const sizes = resolveSizes(rule);
+  log(`Merged ${Object.keys(mergedBidders).length} bidders from ${matchedRules.length} rules for "${slotId}"`, {
+    bidders: Object.keys(mergedBidders)
+  });
 
   return {
     sizes,
-    video: rule.video || false,
-    wrapperConfig: prebidConfig,
-    bidders: prebidConfig.bidders || {},
-    rule
+    video: hasVideo,
+    wrapperConfig: { bidders: mergedBidders },
+    bidders: mergedBidders,
+    rule: primaryRule
   };
 }
 
@@ -397,6 +480,7 @@ export function getResolvedConfig() {
 export default {
   extractAdType,
   findMatchingRule,
+  findAllMatchingRules,
   hasSlotConfig,
   resolveSlotConfig,
   resolveSlotConfigForPrebid,

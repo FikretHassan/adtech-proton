@@ -11,11 +11,14 @@ declare const FEATURE_EXPERIMENTS: boolean;
  * Stub ExperimentManager - no-op implementation
  */
 class StubExperimentManager {
-  testgroup: number = 0;
+  testgroup: number;
   experiments: any[] = [];
   applied: Record<string, any> = {};
 
-  constructor(_config: any = {}) {}
+  constructor(config: any = {}) {
+    // Use provided testgroup or default to 0
+    this.testgroup = config.testgroup ?? 0;
+  }
 
   register(_experiment: any) {}
 
@@ -29,7 +32,7 @@ class StubExperimentManager {
 
   getStatus() {
     return {
-      testgroup: 0,
+      testgroup: this.testgroup,
       registered: [],
       applied: {}
     };

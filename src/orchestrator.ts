@@ -8,7 +8,7 @@
  * - NonCore partners: Share a single nonCoreTimeout (does not gate GAM)
  */
 
-import config from '../config/partners.json';
+import defaultConfig from '../config/partners.json';
 import CONFIG from '../config/loader.js';
 import { TIMEOUTS } from './constants';
 import { safeExecute } from './errors';
@@ -44,6 +44,7 @@ interface PartnerConfig {
   active: boolean;
   timeout?: number;
   dependsOn?: string;
+  testRange?: [number, number];
 }
 
 interface PartnersJsonConfig {
@@ -60,14 +61,17 @@ interface PartnersJsonConfig {
 }
 
 interface OrchestratorInitOptions {
+  testgroup?: number;
   onPartnersReady?: () => void;
   onAllPartnersReady?: () => void;
   partnersStartTime?: number;
+  partnersConfig?: PartnersJsonConfig;
 }
 
 type PartnerReadyCallback = (() => void) | null;
 
-const typedConfig = config as PartnersJsonConfig;
+// Active config (can be overridden via init options)
+let activeConfig: PartnersJsonConfig = defaultConfig as PartnersJsonConfig;
 
 /**
  * Get the loader instance from the global object
@@ -118,6 +122,23 @@ let state: OrchestratorState = {
   nonCoreTimeoutFired: false
 };
 
+// Testgroup for testRange filtering (set via init)
+let testgroup: number | null = null;
+
+/**
+ * Check if a partner passes testRange filter
+ * @param {[number, number]} range - [min, max] inclusive, e.g. [0, 50] = 51% of users
+ * @returns {boolean} True if no testRange or testgroup is within range
+ */
+function isInTestRange(range?: [number, number]): boolean {
+  // No testRange means always include
+  if (!range || !Array.isArray(range) || range.length !== 2) return true;
+  // No testgroup set means always include
+  if (testgroup === null) return true;
+  // Check if testgroup is within range (inclusive)
+  return testgroup >= range[0] && testgroup <= range[1];
+}
+
 // Partner status tracking
 const partnerStatus: {
   blocking: Record<string, PartnerStatusEntry>;
@@ -151,7 +172,12 @@ let onAllPartnersReadyCallback: PartnerReadyCallback = null;
 export function init(options: OrchestratorInitOptions = {}) {
   if (state.initialized) return getState();
 
-  if (!typedConfig.enabled) {
+  // Use provided config or default
+  if (options.partnersConfig) {
+    activeConfig = options.partnersConfig;
+  }
+
+  if (!activeConfig.enabled) {
     log('Orchestrator disabled in config');
     // Fire both callbacks immediately if disabled
     if (options.onPartnersReady) {
@@ -167,6 +193,12 @@ export function init(options: OrchestratorInitOptions = {}) {
   onPartnersReadyCallback = options.onPartnersReady || null;
   onAllPartnersReadyCallback = options.onAllPartnersReady || null;
 
+  // Store testgroup for testRange filtering
+  testgroup = options.testgroup ?? null;
+  if (testgroup !== null) {
+    log('Testgroup set for testRange filtering', { testgroup });
+  }
+
   // Calculate universal timeout from active blocking partners
   const baseTimeout = calculateUniversalTimeout();
 
@@ -177,7 +209,7 @@ export function init(options: OrchestratorInitOptions = {}) {
     const adjusted = baseTimeout - elapsed;
 
     // Ensure minimum timeout (don't go below 500ms or configured minimum)
-    const minTimeout = typedConfig.defaults?.minTimeout || TIMEOUTS.MIN_PARTNER;
+    const minTimeout = activeConfig.defaults?.minTimeout || TIMEOUTS.MIN_PARTNER;
     state.universalTimeout = Math.max(adjusted, minTimeout);
 
     log('Adjusted timeout for elapsed time', {
@@ -189,9 +221,17 @@ export function init(options: OrchestratorInitOptions = {}) {
     state.universalTimeout = baseTimeout;
   }
 
-  // Initialize blocking partner status
-  typedConfig.blocking.forEach(partner => {
+  // Initialize blocking partner status (filtered by testRange)
+  activeConfig.blocking.forEach(partner => {
     if (partner.active) {
+      // Check testRange filter
+      if (!isInTestRange(partner.testRange)) {
+        log(`Partner excluded by testRange: ${partner.name}`, {
+          testRange: partner.testRange,
+          testgroup
+        });
+        return;
+      }
       partnerStatus.blocking[partner.name] = {
         status: 'pending',
         timeout: partner.timeout,
@@ -202,9 +242,17 @@ export function init(options: OrchestratorInitOptions = {}) {
     }
   });
 
-  // Initialize independent partner status
-  typedConfig.independent.forEach(partner => {
+  // Initialize independent partner status (filtered by testRange)
+  activeConfig.independent.forEach(partner => {
     if (partner.active) {
+      // Check testRange filter
+      if (!isInTestRange(partner.testRange)) {
+        log(`Partner excluded by testRange: ${partner.name}`, {
+          testRange: partner.testRange,
+          testgroup
+        });
+        return;
+      }
       partnerStatus.independent[partner.name] = {
         status: 'pending',
         startTime: state.startTime,
@@ -214,11 +262,19 @@ export function init(options: OrchestratorInitOptions = {}) {
   });
 
   // Set independent timeout from config
-  state.independentTimeout = typedConfig.defaults?.independentTimeout || typedConfig.defaults?.universalTimeout || TIMEOUTS.INDEPENDENT;
+  state.independentTimeout = activeConfig.defaults?.independentTimeout || activeConfig.defaults?.universalTimeout || TIMEOUTS.INDEPENDENT;
 
-  // Initialize nonCore partner status
-  typedConfig.nonCore.forEach(partner => {
+  // Initialize nonCore partner status (filtered by testRange)
+  activeConfig.nonCore.forEach(partner => {
     if (partner.active) {
+      // Check testRange filter
+      if (!isInTestRange(partner.testRange)) {
+        log(`Partner excluded by testRange: ${partner.name}`, {
+          testRange: partner.testRange,
+          testgroup
+        });
+        return;
+      }
       partnerStatus.nonCore[partner.name] = {
         status: 'pending',
         startTime: state.startTime,
@@ -228,7 +284,7 @@ export function init(options: OrchestratorInitOptions = {}) {
   });
 
   // Set nonCore timeout from config
-  state.nonCoreTimeout = typedConfig.defaults?.nonCoreTimeout || TIMEOUTS.NON_CORE;
+  state.nonCoreTimeout = activeConfig.defaults?.nonCoreTimeout || TIMEOUTS.NON_CORE;
 
   // Subscribe to partner ready events
   subscribeToPartnerEvents();
@@ -283,13 +339,18 @@ export function init(options: OrchestratorInitOptions = {}) {
  * Supports dependency chains: partners with dependsOn load sequentially
  * Partners without dependencies load in parallel
  * Timeout = MAX of all critical paths through dependency graph
+ * Respects testRange filtering (partners outside testRange are excluded)
  * @returns {number} Total timeout in ms
  */
 function calculateUniversalTimeout() {
-  // Build map of active partners
+  // Build map of active partners (respecting testRange)
   const partners: Record<string, { timeout: number; dependsOn: string | null }> = {};
-  typedConfig.blocking.forEach(partner => {
+  activeConfig.blocking.forEach(partner => {
     if (partner.active && typeof partner.timeout === 'number') {
+      // Check testRange filter
+      if (!isInTestRange(partner.testRange)) {
+        return; // Skip partner outside testRange
+      }
       partners[partner.name] = {
         timeout: partner.timeout,
         dependsOn: partner.dependsOn || null
@@ -328,8 +389,8 @@ function calculateUniversalTimeout() {
   });
 
   // Apply defaults if no active partners
-  if (maxPath === 0 && typedConfig.defaults?.universalTimeout) {
-    maxPath = typedConfig.defaults.universalTimeout;
+  if (maxPath === 0 && activeConfig.defaults?.universalTimeout) {
+    maxPath = activeConfig.defaults.universalTimeout;
   }
 
   return maxPath;
@@ -628,7 +689,7 @@ function fireAllPartnersReady() {
  */
 function startIndependentTimeout() {
   const timeout = state.independentTimeout;
-  const minTimeout = typedConfig.defaults?.minTimeout || TIMEOUTS.MIN_PARTNER;
+  const minTimeout = activeConfig.defaults?.minTimeout || TIMEOUTS.MIN_PARTNER;
   const effectiveTimeout = Math.max(timeout, minTimeout);
 
   log('Starting independent timeout', { timeout: effectiveTimeout + 'ms' });
@@ -672,7 +733,7 @@ function startIndependentTimeout() {
  */
 function startNonCoreTimeout() {
   const timeout = state.nonCoreTimeout;
-  const minTimeout = typedConfig.defaults?.minTimeout || TIMEOUTS.MIN_PARTNER;
+  const minTimeout = activeConfig.defaults?.minTimeout || TIMEOUTS.MIN_PARTNER;
   const effectiveTimeout = Math.max(timeout, minTimeout);
 
   log('Starting nonCore timeout', { timeout: effectiveTimeout + 'ms' });
@@ -810,7 +871,7 @@ export function isNonCoreReady() {
  * @returns {Object} Partners config
  */
 export function getConfig() {
-  return config;
+  return activeConfig;
 }
 
 /**
@@ -819,7 +880,7 @@ export function getConfig() {
  * @returns {string|null} Name of dependency or null
  */
 export function getDependency(name: string) {
-  const partner = typedConfig.blocking.find(p => p.name === name);
+  const partner = activeConfig.blocking.find(p => p.name === name);
   return partner?.dependsOn || null;
 }
 
@@ -842,7 +903,7 @@ export function canLoad(name: string) {
  * @returns {string[]} List of dependent partner names
  */
 export function getDependents(name: string) {
-  return typedConfig.blocking
+  return activeConfig.blocking
     .filter(p => p.active && p.dependsOn === name)
     .map(p => p.name);
 }
@@ -890,6 +951,8 @@ export function reset() {
 
   onPartnersReadyCallback = null;
   onAllPartnersReadyCallback = null;
+  testgroup = null;
+  activeConfig = defaultConfig as PartnersJsonConfig;
   log('Reset complete');
 }
 

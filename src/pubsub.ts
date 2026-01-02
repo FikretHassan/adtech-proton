@@ -1,5 +1,7 @@
 /**
  * PubSub - Lightweight publish/subscribe event system
+ *
+ * Internal performance optimizations use Map/Set for O(1) lookups.
  */
 
 export interface Subscription {
@@ -28,15 +30,30 @@ export interface PublishConfig {
 
 export class PubSub {
   instanceId: string;
-  topics: Subscription[];
   publishedTopics: string[];
   private uid: number;
 
+  // O(1) lookup structures
+  private subscriptionsByToken: Map<string, Subscription>;
+  private subscriptionsByTopic: Map<string, Subscription[]>;
+  private publishedTopicsSet: Set<string>;
+
   constructor() {
     this.instanceId = this.generateInstanceId();
-    this.topics = [];
     this.publishedTopics = [];
     this.uid = -1;
+
+    // Initialize O(1) structures
+    this.subscriptionsByToken = new Map();
+    this.subscriptionsByTopic = new Map();
+    this.publishedTopicsSet = new Set();
+  }
+
+  /**
+   * Get all subscriptions (backward compatibility)
+   */
+  get topics(): Subscription[] {
+    return Array.from(this.subscriptionsByToken.values());
   }
 
   /**
@@ -64,18 +81,23 @@ export class PubSub {
       return false;
     }
 
-    // If topic was already published and runIfAlreadyPublished is true, execute immediately
-    if (runIfAlreadyPublished) {
-      for (let i = 0; i < this.publishedTopics.length; i++) {
-        if (this.publishedTopics[i] === topic) {
-          func.call(null);
-          break;
-        }
-      }
+    // O(1) check if topic was already published
+    if (runIfAlreadyPublished && this.publishedTopicsSet.has(topic)) {
+      func.call(null);
     }
 
     const token = (this.uid += 1).toString();
-    this.topics.push({ token, topic, func });
+    const subscription: Subscription = { token, topic, func };
+
+    // O(1) add to token map
+    this.subscriptionsByToken.set(token, subscription);
+
+    // O(1) add to topic map (amortized)
+    if (!this.subscriptionsByTopic.has(topic)) {
+      this.subscriptionsByTopic.set(topic, []);
+    }
+    this.subscriptionsByTopic.get(topic)!.push(subscription);
+
     return token;
   }
 
@@ -83,25 +105,45 @@ export class PubSub {
    * Unsubscribe from a topic
    */
   unsubscribe({ topic, token }: UnsubscribeConfig): boolean {
-    for (let i = 0; i < this.topics.length; i++) {
-      if (this.topics[i].token === token && this.topics[i].topic === topic) {
-        this.topics.splice(i, 1);
-        return true;
+    // O(1) token lookup
+    const subscription = this.subscriptionsByToken.get(token);
+    if (!subscription || subscription.topic !== topic) {
+      return false;
+    }
+
+    // O(1) delete from token map
+    this.subscriptionsByToken.delete(token);
+
+    // O(m) remove from topic array where m = subscribers to this topic (typically small)
+    const topicSubs = this.subscriptionsByTopic.get(topic);
+    if (topicSubs) {
+      const index = topicSubs.findIndex(s => s.token === token);
+      if (index !== -1) {
+        topicSubs.splice(index, 1);
+      }
+      // Clean up empty topic arrays
+      if (topicSubs.length === 0) {
+        this.subscriptionsByTopic.delete(topic);
       }
     }
-    return false;
+
+    return true;
   }
 
   /**
    * Publish to a topic
    */
   publish({ topic, data }: PublishConfig): void {
+    // O(1) add to set + array (for backward compat)
+    this.publishedTopicsSet.add(topic);
     this.publishedTopics.push(topic);
 
-    for (let i = 0; i < this.topics.length; i++) {
-      if (this.topics[i].topic === topic) {
+    // O(m) iterate only subscribers to this topic
+    const subscribers = this.subscriptionsByTopic.get(topic);
+    if (subscribers) {
+      for (const sub of subscribers) {
         try {
-          this.topics[i].func.call(null, data);
+          sub.func.call(null, data);
         } catch (err) {
           console.error(`[PubSub] Subscriber error on "${topic}":`, err);
         }
@@ -109,21 +151,6 @@ export class PubSub {
     }
   }
 
-  /**
-   * Check if a topic has been published
-   */
-  hasPublished(topic: string): boolean {
-    return this.publishedTopics.includes(topic);
-  }
-
-  /**
-   * Clear all subscriptions and published history
-   */
-  clear(): void {
-    this.topics = [];
-    this.publishedTopics = [];
-    this.uid = -1;
-  }
 }
 
 // Auto-create global instance (order-independent)

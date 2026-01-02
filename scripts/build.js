@@ -14,6 +14,13 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = dirname(__dirname);
 
+// Parse command line arguments
+const args = process.argv.slice(2);
+const mode = args.find(a => !a.startsWith('--')) || 'prod';
+const isTmsMode = mode === 'tms';
+const partnersArg = args.find(a => a.startsWith('--partners='));
+const partnersPath = partnersArg ? partnersArg.split('=')[1] : 'config';
+
 // Import loader config for optional modules
 import loaderConfig from '../config/loader.js';
 
@@ -201,16 +208,24 @@ function validateTargeting(targetingConfig, dimensionsConfig) {
 function validateConfigs() {
   console.log('\nValidating configs...');
 
-  const properties = loadJSON(`${ROOT}/config/properties.json`);
-  const partners = loadJSON(`${ROOT}/config/partners.json`);
-  const sizemapping = loadJSON(`${ROOT}/config/sizemapping.json`);
-  const targeting = loadJSON(`${ROOT}/config/targeting.json`, false);
-  const dimensions = loadJSON(`${ROOT}/config/dimensions.json`);
+  // TMS mode: only validate partners.json from config-tms, skip ad-specific configs
+  if (isTmsMode) {
+    console.log('[TMS Mode] Skipping ad-specific config validation\n');
+    const partners = loadJSON(`${ROOT}/${partnersPath}/partners.json`);
+    validatePartners(partners);
+  } else {
+    // Full mode: validate all configs
+    const properties = loadJSON(`${ROOT}/config/properties.json`);
+    const partners = loadJSON(`${ROOT}/config/partners.json`);
+    const sizemapping = loadJSON(`${ROOT}/config/sizemapping.json`);
+    const targeting = loadJSON(`${ROOT}/config/targeting.json`, false);
+    const dimensions = loadJSON(`${ROOT}/config/dimensions.json`);
 
-  validateProperties(properties);
-  validatePartners(partners);
-  validateSizemapping(sizemapping);
-  validateTargeting(targeting, dimensions);
+    validateProperties(properties);
+    validatePartners(partners);
+    validateSizemapping(sizemapping);
+    validateTargeting(targeting, dimensions);
+  }
 
   if (warnings.length === 0 && errors.length === 0) {
     console.log('[OK] All configs valid\n');
@@ -555,7 +570,6 @@ console.log(`Generated: ${outputPath}`);
 
 // Generate about.js with build metadata
 const buildDate = new Date().toISOString();
-const mode = process.argv[2] || 'prod';
 
 const aboutCode = `/**
  * AUTO-GENERATED - Do not edit directly
@@ -606,41 +620,65 @@ const injectionBlockMode = injectionEnabled && (
     : true  // default to true if simple boolean
 );
 
-const defineFlags = [
-  `--define:FEATURE_SEQUENCING=${optionalModules.sequencing !== false}`,
-  `--define:FEATURE_INJECTION=${injectionEnabled}`,
-  `--define:FEATURE_INJECTION_CHAR_MODE=${injectionCharMode}`,
-  `--define:FEATURE_INJECTION_BLOCK_MODE=${injectionBlockMode}`,
-  `--define:FEATURE_CUSTOM_SLOTS=${optionalModules.customSlots !== false}`,
-  `--define:FEATURE_EXPERIENCES=${optionalModules.experiences !== false}`,
-  `--define:FEATURE_REFRESH=${optionalModules.refresh !== false}`,
-  `--define:FEATURE_EXPERIMENTS=${optionalModules.experiments !== false}`,
-  `--define:FEATURE_CUSTOM_FUNCTIONS=${optionalModules.customFunctions !== false}`,
-  `--define:FEATURE_WRAPPERS=${optionalModules.wrappers !== false}`,
-  `--define:FEATURE_SRA_BATCHING=${optionalModules.sraBatching !== false}`
-].join(' ');
+// TMS mode: disable all ad-specific modules
+const defineFlags = isTmsMode
+  ? [
+      '--define:FEATURE_ADS=false',
+      '--define:FEATURE_SEQUENCING=false',
+      '--define:FEATURE_INJECTION=false',
+      '--define:FEATURE_INJECTION_CHAR_MODE=false',
+      '--define:FEATURE_INJECTION_BLOCK_MODE=false',
+      '--define:FEATURE_CUSTOM_SLOTS=false',
+      '--define:FEATURE_EXPERIENCES=false',
+      '--define:FEATURE_REFRESH=false',
+      '--define:FEATURE_EXPERIMENTS=false',
+      '--define:FEATURE_CUSTOM_FUNCTIONS=false',
+      '--define:FEATURE_WRAPPERS=false',
+      '--define:FEATURE_SRA_BATCHING=false'
+    ].join(' ')
+  : [
+      '--define:FEATURE_ADS=true',
+      `--define:FEATURE_SEQUENCING=${optionalModules.sequencing !== false}`,
+      `--define:FEATURE_INJECTION=${injectionEnabled}`,
+      `--define:FEATURE_INJECTION_CHAR_MODE=${injectionCharMode}`,
+      `--define:FEATURE_INJECTION_BLOCK_MODE=${injectionBlockMode}`,
+      `--define:FEATURE_CUSTOM_SLOTS=${optionalModules.customSlots !== false}`,
+      `--define:FEATURE_EXPERIENCES=${optionalModules.experiences !== false}`,
+      `--define:FEATURE_REFRESH=${optionalModules.refresh !== false}`,
+      `--define:FEATURE_EXPERIMENTS=${optionalModules.experiments !== false}`,
+      `--define:FEATURE_CUSTOM_FUNCTIONS=${optionalModules.customFunctions !== false}`,
+      `--define:FEATURE_WRAPPERS=${optionalModules.wrappers !== false}`,
+      `--define:FEATURE_SRA_BATCHING=${optionalModules.sraBatching !== false}`
+    ].join(' ');
 
 // Log which features are enabled
-console.log('\nOptional modules:');
-console.log(`  sequencing:   ${optionalModules.sequencing !== false ? '[+] enabled' : '[-] disabled'}`);
-console.log(`  injection:    ${injectionEnabled ? '[+] enabled' : '[-] disabled'}`);
-if (injectionEnabled) {
-  console.log(`    |-- charMode:  ${injectionCharMode ? '[+] enabled' : '[-] disabled'}`);
-  console.log(`    +-- blockMode: ${injectionBlockMode ? '[+] enabled' : '[-] disabled'}`);
+if (isTmsMode) {
+  console.log('\n[TMS Mode] All ad-specific modules disabled');
+  console.log(`  Partners from: ${partnersPath}/partners.json\n`);
+} else {
+  console.log('\nOptional modules:');
+  console.log(`  sequencing:   ${optionalModules.sequencing !== false ? '[+] enabled' : '[-] disabled'}`);
+  console.log(`  injection:    ${injectionEnabled ? '[+] enabled' : '[-] disabled'}`);
+  if (injectionEnabled) {
+    console.log(`    |-- charMode:  ${injectionCharMode ? '[+] enabled' : '[-] disabled'}`);
+    console.log(`    +-- blockMode: ${injectionBlockMode ? '[+] enabled' : '[-] disabled'}`);
+  }
+  console.log(`  customSlots:  ${optionalModules.customSlots !== false ? '[+] enabled' : '[-] disabled'}`);
+  console.log(`  experiences:  ${optionalModules.experiences !== false ? '[+] enabled' : '[-] disabled'}`);
+  console.log(`  refresh:      ${optionalModules.refresh !== false ? '[+] enabled' : '[-] disabled'}`);
+  console.log(`  experiments:  ${optionalModules.experiments !== false ? '[+] enabled' : '[-] disabled'}`);
+  console.log(`  customFuncs:  ${optionalModules.customFunctions !== false ? '[+] enabled' : '[-] disabled'}`);
+  console.log(`  wrappers:     ${optionalModules.wrappers !== false ? '[+] enabled' : '[-] disabled'}`);
+  console.log(`  sraBatching:  ${optionalModules.sraBatching !== false ? '[+] enabled' : '[-] disabled'}`);
+  console.log('');
 }
-console.log(`  customSlots:  ${optionalModules.customSlots !== false ? '[+] enabled' : '[-] disabled'}`);
-console.log(`  experiences:  ${optionalModules.experiences !== false ? '[+] enabled' : '[-] disabled'}`);
-console.log(`  refresh:      ${optionalModules.refresh !== false ? '[+] enabled' : '[-] disabled'}`);
-console.log(`  experiments:  ${optionalModules.experiments !== false ? '[+] enabled' : '[-] disabled'}`);
-console.log(`  customFuncs:  ${optionalModules.customFunctions !== false ? '[+] enabled' : '[-] disabled'}`);
-console.log(`  wrappers:     ${optionalModules.wrappers !== false ? '[+] enabled' : '[-] disabled'}`);
-console.log(`  sraBatching:  ${optionalModules.sraBatching !== false ? '[+] enabled' : '[-] disabled'}`);
-console.log('');
 
 const commands = {
   // entry.ts = auto-initializing bundle
   prod: `npx esbuild src/entry.ts --bundle --minify --format=iife ${defineFlags} --outfile=dist/proton.min.js`,
   dev: `npx esbuild src/entry.ts --bundle --format=iife --sourcemap ${defineFlags} --outfile=dist/proton.js`,
+  // TMS-only build (no ads, marketing/analytics only) - uses dedicated entry point
+  tms: `npx esbuild src/entry-tms.ts --bundle --minify --format=iife ${defineFlags} --outfile=dist/proton-tms.min.js`,
   // Library-only build (for manual instantiation)
   lib: 'npx esbuild src/index.ts --bundle --minify --format=iife --global-name=Proton --outfile=dist/proton.lib.min.js',
   esm: 'npx esbuild src/index.ts --bundle --minify --format=esm --outfile=dist/proton.esm.min.js',

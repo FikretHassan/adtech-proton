@@ -2,6 +2,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   define: {
+    // Core feature flag (true = full ad stack, false = TMS-only)
+    FEATURE_ADS: true,
     // Disable optional modules in test (they use require() which breaks ESM)
     FEATURE_REFRESH: false,
     FEATURE_SEQUENCING: false,

@@ -69,7 +69,6 @@ vi.mock('../src/index', () => {
       return true;
     });
     unsubscribe = vi.fn();
-    hasPublished = vi.fn((topic: string) => mockPubsubHasPublished(topic));
   }
 
   return { __esModule: true, default: MockProton, PubSub: MockPubSub };

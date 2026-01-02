@@ -206,6 +206,37 @@ Ready event is auto-derived as `plugin.mypartner.complete`.
 | `description` | string | No | - | Human-readable description for documentation |
 | `timeout` | number | Blocking only | - | Individual timeout in ms (only for blocking category) |
 | `dependsOn` | string | No | null | Name of partner that must complete first (only for blocking category) |
+| `testRange` | [number, number] | No | null | A/B test bucket range [min, max] (0-99). Partner only loads if pageview testgroup falls within range. |
+
+### Partner A/B Testing (testRange)
+
+Any partner (blocking, independent, or nonCore) can use `testRange` to run only for a percentage of pageviews. Uses the same testgroup system as experiments.
+
+```json
+{
+  "blocking": [
+    {
+      "name": "newBidder",
+      "timeout": 1500,
+      "active": true,
+      "testRange": [0, 49],
+      "description": "Test new bidder on 50% of traffic"
+    }
+  ]
+}
+```
+
+| Range | Traffic |
+|-------|---------|
+| `[0, 49]` | 50% |
+| `[0, 24]` | 25% |
+| `[0, 9]` | 10% |
+| `[50, 99]` | 50% (different segment) |
+
+**Notes:**
+- testRange uses the same testgroup (0-99) as experiments
+- Partners without testRange load for all pageviews
+- Combine with `active: true/false` for full control
 
 ## Usage Example
 

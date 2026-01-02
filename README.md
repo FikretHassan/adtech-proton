@@ -36,6 +36,7 @@ npm run build
 | `npm run build` | `dist/proton.min.js` | Production bundle |
 | `npm run build:dev` | `dist/proton.js` | Development with sourcemaps |
 | `npm run build:pubsub` | `dist/pubsub.min.js` | Standalone PubSub |
+| `npm run proton:tms` | `dist/proton-tms.min.js` | Tag Manager build (no ads) |
 
 ### Optional Modules
 
@@ -60,6 +61,29 @@ optionalModules: {
 ```
 
 Runtime SRA batching lives under `ads.sraBatching.enabled` (see `config/loader.js`). The `optionalModules.sraBatching` flag removes the batching helpers from the bundle entirely.
+
+### Proton Tag Manager (TMS)
+
+Lightweight build for loading third-party scripts without ad functionality. Use when you need partner orchestration and plugin loading but not GAM/advertising features.
+
+**Build:**
+```bash
+npm run proton:tms        # Production
+npm run proton:tms:dev    # Development
+```
+
+**Config:** Uses `config-tms/` folder (separate from main config):
+```
+config-tms/
+├── partners.json         # Orchestration config
+└── partners/
+    ├── index.js          # Partner exports
+    └── mypartner.js      # Partner definitions
+```
+
+**Included:** PubSub, Orchestrator, Plugin Loader, Hooks, Consent
+
+**Excluded:** GPT, Slots, Targeting, Refresh, Injection, Wrappers, Experiments
 
 ---
 
@@ -126,6 +150,7 @@ Proton initializes immediately, waits for `cmp.ready` before loading partners, t
 | Configure multiple sites | [multiProperty.md](docs/multiProperty.md) |
 | Add lifecycle hooks | [hooks.md](docs/hooks.md) |
 | Enable ad refresh | [adRefresh.md](docs/adRefresh.md) |
+| Load scripts without ads | [README.md](#proton-tag-manager-tms) (TMS section above) |
 
 ---
 
