@@ -56,16 +56,25 @@ const stub = {
 
 // Conditional export - esbuild tree-shakes the unused branch
 let module: typeof RealModule;
+let adapterRegistration: { registerAdapters: () => void } | null = null;
 
 if (FEATURE_WRAPPERS) {
   // @ts-ignore - dynamic require for esbuild
   module = require('../wrapperAuctions').default;
 
-  // Also import adapter registration (registers adapters with orchestrator)
+  // Import adapter registration module (but don't auto-register)
   // @ts-ignore - dynamic require for esbuild
-  require('../../config/wrapperauctions/index.js');
+  adapterRegistration = require('../../config/wrapperauctions/index.js');
 } else {
   module = stub;
+}
+
+/**
+ * Register wrapper adapters with the orchestrator
+ * Must be called after PubSub is set up (for experimentalPubsub compatibility)
+ */
+export function registerAdapters(): void {
+  adapterRegistration?.registerAdapters();
 }
 
 export default module;

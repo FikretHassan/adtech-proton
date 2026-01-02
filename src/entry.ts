@@ -22,7 +22,7 @@ import preRequestHooks from './preRequestHooks';
 import hooks from './hooks';
 import adSequencing from './optional/sequencing';
 import experienceLoader from './optional/experiences';
-import wrapperAuctions from './optional/wrapperAuctions';
+import wrapperAuctions, { registerAdapters as registerWrapperAdapters } from './optional/wrapperAuctions';
 import functions from './functions';
 import customSlots from './optional/customSlots';
 import customFunctions from '../config/customFunctions/index.js';
@@ -91,6 +91,10 @@ const pubsub = getOrCreatePubSub();
 
 // Always assign to window for module access (aliases external when using experimentalPubsub)
 window[CONFIG.pubsubGlobal] = pubsub;
+
+// Register wrapper adapters now that PubSub is set up
+// (must happen after PubSub alias for experimentalPubsub compatibility)
+registerWrapperAdapters();
 
 // ============================================================================
 // Initialize Hooks System (must be first to catch all lifecycle events)
