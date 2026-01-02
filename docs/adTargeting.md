@@ -85,6 +85,33 @@ At runtime, targeting config is merged: `common` + `properties[currentProperty]`
 - Different properties can use the same targeting key name with different data sources
 - Properties without specific config only get common targeting
 
+### Property Filtering
+
+Common keys can be restricted to specific properties using the `properties` array:
+
+```json
+{
+  "common": {
+    "pageLevel": {
+      "vp": { "source": "internal", "fn": "getBreakpoint" },
+      "userstate": {
+        "source": "window",
+        "path": "site.user.loginStatus",
+        "properties": ["siteA", "siteB", "dev"]
+      }
+    }
+  }
+}
+```
+
+| Behavior | Description |
+|----------|-------------|
+| No `properties` array | Key applies to all properties |
+| `properties: ["siteA", "siteB"]` | Key only applies to those properties |
+| `properties: ["all"]` | Key applies to all properties (explicit) |
+
+This avoids duplicating keys across property sections when most properties share the same config but some don't need certain keys.
+
 ### Normalization Options
 
 | Key | Type | Default | Description |

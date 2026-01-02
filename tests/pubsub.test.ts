@@ -26,6 +26,12 @@ describe('PubSub', () => {
       const pubsub2 = new PubSub();
       expect(pubsub.instanceId).not.toBe(pubsub2.instanceId);
     });
+
+    it('uses provided instanceId when passed to constructor', () => {
+      const customId = 'my-custom-instance-id-12345';
+      const customPubsub = new PubSub(customId);
+      expect(customPubsub.instanceId).toBe(customId);
+    });
   });
 
   describe('generateInstanceId', () => {

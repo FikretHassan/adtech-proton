@@ -38,6 +38,7 @@ export default {
   readyTopic: 'cmp.ready',        // PubSub topic to wait for (null = immediate)
   pubsubGlobal: 'PubSub',         // Global PubSub instance name
   experimentalPubsub: null,       // Use external PubSub (e.g., 'myApp.pubsub')
+  instanceId: null,               // Use external instanceId (e.g., 'site.instanceId')
 
   ads: {
     autoRequest: true,            // Auto-request ads when partners ready
@@ -73,6 +74,8 @@ export default {
 | `debugParam` | string | URL parameter to enable debug logging |
 | `readyTopic` | string\|null | PubSub topic to wait for before loading plugins |
 | `pubsubGlobal` | string | Global PubSub instance name |
+| `experimentalPubsub` | string\|null | Path to external PubSub (e.g., `'myApp.pubsub'`) |
+| `instanceId` | string\|null | Path to external instanceId for log correlation (e.g., `'site.instanceId'`) |
 | `ads` | object | Ad request configuration |
 | `optionalModules` | object | Build-time feature flags (see below) |
 

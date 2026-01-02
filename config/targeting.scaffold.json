@@ -67,6 +67,13 @@
         "fn": "getIsProduction"
       },
 
+      "userstate": {
+        "_comment": "User login state - only for siteA and siteB (not all properties)",
+        "source": "window",
+        "path": "site.user.loginStatus",
+        "properties": ["siteA", "siteB"]
+      },
+
       "geo": {
         "_comment": "Example: Fallback chain - tries each source until truthy value found",
         "sources": [

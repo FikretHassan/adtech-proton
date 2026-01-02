@@ -9,6 +9,7 @@ import CONFIG from '../config/loader.js';
 import coreFunctions, { flushLogs } from './internalFunctions';
 import configFunctions from '../config/targetingFunctions/index.js';
 import { getProperty } from './property';
+import { matchesProperty } from './targeting';
 
 // Logging prefix
 const LOG_PREFIX = '[AdTargeting]';
@@ -16,20 +17,37 @@ const LOG_PREFIX = '[AdTargeting]';
 /**
  * Get resolved targeting config (common + property-specific merged)
  * Property-specific definitions override common ones for the same key
+ * Keys with "properties" array are filtered to only include matching properties
  */
 function getTargetingConfig() {
   const property = getProperty();
   const common = (rawConfig as any).common || {};
   const propertyConfig = (rawConfig as any).properties?.[property] || {};
 
+  // Filter common pageLevel keys by property
+  const filteredPageLevel: Record<string, any> = {};
+  for (const [key, def] of Object.entries(common.pageLevel || {})) {
+    if (matchesProperty((def as any).properties, property)) {
+      filteredPageLevel[key] = def;
+    }
+  }
+
+  // Filter common slotLevel keys by property
+  const filteredSlotLevel: Record<string, any> = {};
+  for (const [key, def] of Object.entries(common.slotLevel || {})) {
+    if (matchesProperty((def as any).properties, property)) {
+      filteredSlotLevel[key] = def;
+    }
+  }
+
   return {
     normalization: (rawConfig as any).normalization || {},
     pageLevel: {
-      ...(common.pageLevel || {}),
+      ...filteredPageLevel,
       ...(propertyConfig.pageLevel || {})
     },
     slotLevel: {
-      ...(common.slotLevel || {}),
+      ...filteredSlotLevel,
       ...(propertyConfig.slotLevel || {})
     }
   };
