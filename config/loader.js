@@ -23,6 +23,12 @@ export default {
   // Name of global PubSub instance (for sites using inline pubsub.min.js)
   pubsubGlobal: 'PubSub',
 
+  // If you already use an existing unique page instance ID (commonly used to sync log level data across systems)
+  // Set the below to a string path to use an existing global value
+  // Otherwise, set to null/undefined to auto-generate UUID (default behavior)
+  // When set, this ID is used for PubSub instanceId and targeting
+  instanceId: null,
+
   // EXPERIMENTAL: Use an existing global PubSub instead of creating one
   // Set to null/undefined to create window.PubSub (default behavior)
   // Set to a string to use that existing global (e.g., 'MyEventBus' or 'site.pubsub')

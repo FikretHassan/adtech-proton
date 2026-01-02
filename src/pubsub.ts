@@ -38,8 +38,9 @@ export class PubSub {
   private subscriptionsByTopic: Map<string, Subscription[]>;
   private publishedTopicsSet: Set<string>;
 
-  constructor() {
-    this.instanceId = this.generateInstanceId();
+  constructor(instanceId?: string) {
+    // Use provided instanceId or generate one
+    this.instanceId = instanceId || this.generateInstanceId();
     this.publishedTopics = [];
     this.uid = -1;
 

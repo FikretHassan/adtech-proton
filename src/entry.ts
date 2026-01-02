@@ -61,11 +61,25 @@ function getMergedDimensions(): Record<string, any> {
   return { ...common, ...propertyDimensions };
 }
 
+// Resolve instanceId from config (supports dot-notation paths)
+function resolveInstanceId(): string | undefined {
+  const instanceIdPath = (CONFIG as any).instanceId;
+  if (instanceIdPath && typeof instanceIdPath === 'string') {
+    const resolved = getWindowPath(instanceIdPath);
+    if (resolved && typeof resolved === 'string') {
+      console.log(`[Proton] Using external instanceId: ${instanceIdPath}`);
+      return resolved;
+    }
+  }
+  return undefined;
+}
+
 // Validate and get PubSub instance
 // Supports experimental external PubSub via CONFIG.experimentalPubsub
 // Accepts dot-notation paths (e.g., 'myApp.pubsub' resolves to window.myApp.pubsub)
 function getOrCreatePubSub(): any {
   const externalName = (CONFIG as any).experimentalPubsub;
+  const instanceId = resolveInstanceId();
 
   if (externalName && typeof externalName === 'string') {
     // Support dot-notation paths (e.g., 'myApp.pubsub' -> window.myApp.pubsub)
@@ -76,6 +90,10 @@ function getOrCreatePubSub(): any {
 
     if (missingMethods.length === 0 && missingArrays.length === 0) {
       console.log(`[Proton] Using external PubSub: ${externalName}`);
+      // If config instanceId is set, override external PubSub's instanceId
+      if (instanceId) {
+        external.instanceId = instanceId;
+      }
       return external;
     }
 
@@ -83,7 +101,8 @@ function getOrCreatePubSub(): any {
     console.warn(`[Proton] experimentalPubsub: ${externalName} invalid (missing: ${missing.join(', ')}). Creating internal PubSub.`);
   }
 
-  return (window as any)[CONFIG.pubsubGlobal] || new PubSub();
+  // Create internal PubSub with optional instanceId
+  return (window as any)[CONFIG.pubsubGlobal] || new PubSub(instanceId);
 }
 
 // Get or create PubSub instance
@@ -289,6 +308,10 @@ function resolveAdUnitMapping(dimConfig: any): string | null {
 
   // Object with source definition - resolve directly
   if (typeof dimConfig === 'object' && dimConfig.source) {
+    // Route 'internal' to adTargeting which has the functions registry
+    if (dimConfig.source === 'internal') {
+      return adTargeting.resolveValueDefinition(dimConfig);
+    }
     return resolveDimensionValue(dimConfig);
   }
 
@@ -789,6 +812,9 @@ if (FEATURE_CUSTOM_FUNCTIONS) {
 
 // Expose testgroup for debugging (consistent value used across all systems)
 (loader as any).testgroup = testgroup;
+
+// Expose instanceId for debugging and log correlation
+(loader as any).instanceId = pubsub.instanceId;
 
 // Expose slot registry
 // Returns comprehensive slot data: adunit, sizes, targeting, prebid, etc.
