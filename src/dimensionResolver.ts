@@ -2,9 +2,48 @@
  * Dimension Resolver Module
  * Helper functions for resolving dimension values from various sources
  * (meta tags, window paths, cookies, URLs, static values)
+ *
+ * Performance: Caches resolved dimension values per request cycle.
+ * Cache is cleared on SPA navigation (requestAds) to ensure fresh values.
  */
 
 import sizemapping from './sizemapping';
+
+// Dimension value cache - cleared on requestAds() for SPA support
+const dimensionCache = new Map<string, any>();
+let cacheEnabled = false;
+
+// Dimensions that should never be cached (must remain live)
+const UNCACHED_DIMENSIONS = new Set(['viewport', 'breakpoint']);
+
+/**
+ * Clear the dimension cache (call on SPA navigation)
+ */
+export function clearDimensionCache(): void {
+  dimensionCache.clear();
+  cacheEnabled = false;
+}
+
+/**
+ * Enable dimension caching for current request cycle
+ */
+export function enableDimensionCache(): void {
+  cacheEnabled = true;
+}
+
+/**
+ * Check if a dimension value is cached
+ */
+export function hasCachedDimension(dimensionKey: string): boolean {
+  return dimensionCache.has(dimensionKey);
+}
+
+/**
+ * Get cache statistics (for debugging)
+ */
+export function getCacheStats(): { size: number; enabled: boolean } {
+  return { size: dimensionCache.size, enabled: cacheEnabled };
+}
 
 /**
  * Get a value from a nested window path
@@ -97,9 +136,32 @@ export function applyTransform(value: any, transform: string): any {
  * Supports fallback chains via sources array - first truthy value wins
  * Supports transforms: lowercase, uppercase, trim, removeTrailingColon
  * @param {Object|string} sourceConfig - Source configuration or string (static value)
+ * @param {string} [dimensionKey] - Optional dimension key for caching
  * @returns {*} Resolved value or null
  */
-export function resolveDimensionValue(sourceConfig: any): any {
+export function resolveDimensionValue(sourceConfig: any, dimensionKey?: string): any {
+  // Check cache first (if enabled and key provided and not an uncached dimension)
+  if (cacheEnabled && dimensionKey && !UNCACHED_DIMENSIONS.has(dimensionKey)) {
+    if (dimensionCache.has(dimensionKey)) {
+      return dimensionCache.get(dimensionKey);
+    }
+  }
+
+  // Resolve the value
+  const value = resolveDimensionValueInternal(sourceConfig);
+
+  // Cache the result (if enabled and key provided and not an uncached dimension)
+  if (cacheEnabled && dimensionKey && !UNCACHED_DIMENSIONS.has(dimensionKey)) {
+    dimensionCache.set(dimensionKey, value);
+  }
+
+  return value;
+}
+
+/**
+ * Internal resolution logic (no caching)
+ */
+function resolveDimensionValueInternal(sourceConfig: any): any {
   if (typeof sourceConfig === 'string') {
     return sourceConfig;
   }

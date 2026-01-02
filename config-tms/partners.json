@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "blocking": [],
+  "independent": [],
+  "nonCore": [
+    {
+      "name": "catchmetrics",
+      "active": true,
+      "timeout": 2000,
+      "description": "Catchmetrics - analytics platform"
+    }
+  ],
+  "defaults": {
+    "universalTimeout": 1000,
+    "independentTimeout": 1000,
+    "nonCoreTimeout": 5000,
+    "minTimeout": 500
+  }
+}

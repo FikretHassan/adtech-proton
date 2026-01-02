@@ -12,6 +12,7 @@ Manages A/B test experiments for plugins. Experiments modify plugin configuratio
 
 - Each pageview is assigned a random testgroup (0-99)
 - No persistence - truly random per pageview
+- Same testgroup is used by partner orchestration `testRange` (see [partnerOrchestration.md](partnerOrchestration.md))
 
 ### Experiment Properties
 
@@ -39,6 +40,9 @@ proton.experiments.getStatus()
 
 // Check if pageview is in range
 proton.experiments.isInRange([0, 24])  // true if testgroup 0-24
+
+// Access testgroup directly
+proton.testgroup  // 0-99
 ```
 
 ## Usage

@@ -32,7 +32,7 @@ import { TIMEOUTS } from './constants';
 import consent from '../config/consent.js';
 import { resolveConfig } from './propertyConfig';
 import { getProperty } from './property';
-import { getWindowPath, resolveDimensionValue } from './dimensionResolver';
+import { getWindowPath, resolveDimensionValue, clearDimensionCache, enableDimensionCache } from './dimensionResolver';
 
 // Build-time feature flags (set by esbuild --define)
 declare const FEATURE_SEQUENCING: boolean;
@@ -214,8 +214,12 @@ if (preQueuedCommands.length > 0) {
   loader.cmd = [...preQueuedCommands, ...loader.cmd];
 }
 
-// Create experiment manager with same context and config as loader
+// Generate testgroup ONCE at boot (shared by ExperimentManager AND orchestrator)
+const testgroup = Math.floor(Math.random() * 100);
+
+// Create experiment manager with Proton's testgroup
 const experimentManager = new ExperimentManager({
+  testgroup,
   getContext: () => loader.getContext(),
   dimensionConfig: loader.dimensionConfig
 });
@@ -311,8 +315,14 @@ function buildAdContext(): { site: string; zone: string; pagetype: string } {
  * loaded first and we wait for their render before loading other slots.
  */
 async function requestAds() {
+  // Clear dimension cache for fresh values (SPA navigation support)
+  clearDimensionCache();
+
   const context = buildAdContext();
   const adsConfig = CONFIG.ads || {};
+
+  // Enable caching for subsequent dimension reads in this request cycle
+  enableDimensionCache();
 
   // Update wrapper auctions with context for slot config lookups
   wrapperAuctions.updateContext({
@@ -637,6 +647,7 @@ function loadPlugins(partnersStartTime: number) {
   // - 'loader.partners.ready' fires when blocking partners complete or timeout
   // - 'loader.ads.ready' fires when ALL partners (blocking + independent) complete or timeout
   orchestrator.init({
+    testgroup, // Pass Proton's testgroup for consistent testRange filtering
     partnersStartTime, // Pass start time so orchestrator can subtract elapsed time
     onPartnersReady: () => {
       loader.log(`${LOG_PREFIX} Blocking partners ready`);
@@ -772,6 +783,9 @@ if (FEATURE_CUSTOM_FUNCTIONS) {
 // Attach build metadata
 (loader as any).about = about;
 
+// Expose testgroup for debugging (consistent value used across all systems)
+(loader as any).testgroup = testgroup;
+
 // Expose slot registry
 // Returns comprehensive slot data: adunit, sizes, targeting, prebid, etc.
 Object.defineProperty(loader, 'ads', {
@@ -781,6 +795,9 @@ Object.defineProperty(loader, 'ads', {
 
 // Expose requestAds for manual invocation (SPA navigation, etc)
 (loader as any).requestAds = requestAds;
+
+// Expose clearDimensionCache for manual cache invalidation (edge cases)
+(loader as any).clearDimensionCache = clearDimensionCache;
 
 // Expose reevaluatePartners for SPA navigation (re-check partners that didn't load)
 (loader as any).reevaluatePartners = reevaluatePartners;

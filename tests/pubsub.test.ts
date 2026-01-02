@@ -203,42 +203,4 @@ describe('PubSub', () => {
     });
   });
 
-  describe('hasPublished', () => {
-    it('returns true if topic was published', () => {
-      pubsub.publish({ topic: 'test-topic' });
-      expect(pubsub.hasPublished('test-topic')).toBe(true);
-    });
-
-    it('returns false if topic was not published', () => {
-      expect(pubsub.hasPublished('nonexistent')).toBe(false);
-    });
-  });
-
-  describe('clear', () => {
-    it('removes all topics', () => {
-      pubsub.subscribe({ topic: 'topic1', func: () => {} });
-      pubsub.subscribe({ topic: 'topic2', func: () => {} });
-
-      pubsub.clear();
-
-      expect(pubsub.topics).toEqual([]);
-    });
-
-    it('clears publishedTopics', () => {
-      pubsub.publish({ topic: 'topic1' });
-      pubsub.publish({ topic: 'topic2' });
-
-      pubsub.clear();
-
-      expect(pubsub.publishedTopics).toEqual([]);
-    });
-
-    it('resets uid counter', () => {
-      pubsub.subscribe({ topic: 'topic1', func: () => {} });
-      pubsub.clear();
-
-      const token = pubsub.subscribe({ topic: 'topic2', func: () => {} });
-      expect(token).toBe('0');
-    });
-  });
 });

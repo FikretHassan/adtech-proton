@@ -14,6 +14,8 @@
     "build:pubsub": "node scripts/build.js pubsub",
     "build:pubsub:dev": "node scripts/build.js pubsub:dev",
     "build:all": "node scripts/build.js all",
+    "proton:tms": "node scripts/build.js tms --partners=config-tms",
+    "proton:tms:dev": "node scripts/build.js tms --partners=config-tms",
     "serve": "npx serve . -l 3000",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -23,7 +25,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FikretHassan/adtech-proton.git"
+    "url": "git+https://github.com/FikretHassan/adtech-plugin-loader.git"
   },
   "keywords": [
     "adtech",
@@ -41,9 +43,9 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/FikretHassan/adtech-proton/issues"
+    "url": "https://github.com/FikretHassan/adtech-plugin-loader/issues"
   },
-  "homepage": "https://github.com/FikretHassan/adtech-proton#readme",
+  "homepage": "https://github.com/FikretHassan/adtech-plugin-loader#readme",
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@typescript-eslint/eslint-plugin": "^8.50.1",
