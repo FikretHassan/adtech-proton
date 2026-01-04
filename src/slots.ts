@@ -410,6 +410,10 @@ export function defineGPTSlot({ slotId, adType, adUnitPath, sizes, targeting = {
     adslot: null  // Set after GPT slot is created
   };
 
+  // Mark as pending immediately (sync) to prevent duplicate defineGPTSlot calls
+  // Updated with actual GPT slot object inside the async callback below
+  definedSlots.set(slotId, null);
+
   let gptSlot: any = null;
 
   window.googletag.cmd.push(() => {

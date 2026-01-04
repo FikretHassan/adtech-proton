@@ -30,6 +30,12 @@ Supports multiple injection modes for different page types (articles, liveblogs,
 | `contentSelectors` | string[] | - | CSS selectors for content containers |
 | `countMode` | string | `'chars'` | Counting mode: `'chars'` or `'blocks'` |
 | `blockSelector` | string | - | CSS selector for blocks (required when `countMode: 'blocks'`) |
+| `waitForEvent` | string | - | PubSub topic to wait for before injection |
+| `customInjector` | function | - | Custom injection function (bypasses standard counting) |
+| `defaultAdStyle` | object | - | Default inline styles for ad div (all rules) |
+| `defaultLabelStyle` | object | - | Default inline styles for label (all rules) |
+| `defaultWrapperStyle` | object | - | Default inline styles for container (all rules) |
+| `onRender` | object | - | Styles applied when ad renders (see Style Hierarchy) |
 | `rules` | array | - | Dimension-based injection rules |
 
 ### Rule Properties
@@ -72,6 +78,148 @@ In debug mode (`?adDebugLogs`), warnings are logged when:
 - Multiple rules match within a mode
 
 This helps identify ambiguous configurations that should be tightened with `exclude` conditions.
+
+### waitForEvent
+
+Delays injection until a PubSub topic is published. Useful when content renders asynchronously after initial page load.
+
+```javascript
+export default {
+  active: true,
+  match: { pagetype: ['feed'] },
+  waitForEvent: 'page.content.ready',  // Wait for async content
+  contentSelectors: ['.feed-content'],
+  rules: [...]
+};
+```
+
+When `waitForEvent` is set:
+1. `init()` subscribes to the topic with `runIfAlreadyPublished: true`
+2. External `injectAds()` calls are blocked until the event fires
+3. When event fires, injection runs and slots are processed if `loader.ads.ready` already fired
+
+### customInjector
+
+For complex injection scenarios that can't be expressed with standard counting rules, provide a custom function that handles all injection logic.
+
+**Signature:**
+```javascript
+function customInjector(context, rule, helpers) {
+  // Your injection logic here
+  return { injected: number, slots: string[] };
+}
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `context` | object | Page context from `loader.getContext()` |
+| `rule` | object | Matched rule config (firstAd, otherAd, maxAds, etc.) |
+| `helpers` | object | Utility functions (see below) |
+
+**Helpers Object:**
+
+| Helper | Signature | Description |
+|--------|-----------|-------------|
+| `createAdContainer` | `(index: number) => HTMLElement` | Creates styled container div |
+| `insertAdBefore` | `(ref: Element, container: HTMLElement) => void` | Insert before element |
+| `insertAdAfter` | `(ref: Element, container: HTMLElement) => void` | Insert after element |
+| `buildSlotId` | `(index: number) => string` | Build slot ID (e.g., `advert_site_dyn_0`) |
+| `trackSlot` | `(slotId: string) => void` | Register slot for GPT processing |
+| `getState` | `() => object` | Get current injection state |
+| `setState` | `(updates: object) => void` | Update injection state |
+| `finishInjection` | `(results: object) => object` | Publish events and return results |
+| `log` | `(message: string, data?: any) => void` | Debug logging |
+| `warn` | `(message: string, data?: any) => void` | Warning logging |
+
+**Example:**
+```javascript
+function myCustomInjector(context, rule, helpers) {
+  var results = { injected: 0, slots: [] };
+  var state = helpers.getState();
+  var dynCount = state.dynCount || 0;
+
+  function injectAd(referenceNode) {
+    if (dynCount >= rule.maxAds) return false;
+    var container = helpers.createAdContainer(dynCount);
+    helpers.insertAdAfter(referenceNode, container);
+    helpers.trackSlot(helpers.buildSlotId(dynCount));
+    results.slots.push(helpers.buildSlotId(dynCount));
+    results.injected++;
+    dynCount++;
+    return true;
+  }
+
+  // Your custom logic - iterate content and call injectAd()
+  var items = document.querySelectorAll('.content-item');
+  items.forEach(function(item, i) {
+    if (i > 0 && i % rule.itemInterval === 0) {
+      injectAd(item);
+    }
+  });
+
+  helpers.setState({ dynCount: dynCount });
+  return helpers.finishInjection(results);
+}
+
+export default {
+  active: true,
+  match: { pagetype: ['feed'] },
+  waitForEvent: 'page.content.ready',
+  customInjector: myCustomInjector,
+  rules: [
+    {
+      match: { userState: ['anon'] },
+      config: { maxAds: 6, itemInterval: 3 }
+    },
+    {
+      match: { userState: ['sub'] },
+      config: { maxAds: 2, itemInterval: 5 }
+    }
+  ]
+};
+```
+
+### Style Hierarchy
+
+Styles are applied in layers, with later layers overriding earlier ones:
+
+```
+globals.js defaults
+    ↓
+mode.defaultAdStyle / mode.defaultLabelStyle / mode.defaultWrapperStyle
+    ↓
+rule.adStyle / rule.labelStyle / rule.wrapperStyle
+    ↓
+mode.onRender (applied when ad renders via slot.afterRender hook)
+```
+
+**onRender Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `wrapperStyle` | object | Styles applied to container when ad renders |
+| `labelStyle` | object | Styles applied to label when ad renders |
+| `labelText` | string | Label text (set on creation, visible on render) |
+| `adStyle` | object | Styles applied to ad div when ad renders |
+
+**Example - ads start collapsed, expand on render:**
+```javascript
+export default {
+  active: true,
+  match: { pagetype: ['feed'] },
+  defaultAdStyle: { height: '0px', opacity: '0' },
+  defaultLabelStyle: { height: '0px' },
+  onRender: {
+    wrapperStyle: { height: 'auto', marginBottom: '24px' },
+    labelStyle: { height: '25px' },
+    labelText: 'Advertisement',
+    adStyle: { height: 'auto', opacity: '1' }
+  },
+  rules: [...]
+};
+```
 
 ### API
 

@@ -98,7 +98,7 @@ function getMatchedContentElement(element: Element | null): { selector: string; 
 function canInjectAtPosition(element: Element, position: 'before' | 'after'): { allowed: boolean; reason: string } {
   const { contentElements } = injectionConfig;
 
-  // If no contentElements config, allow all injections (backward compatibility)
+  // If no contentElements config, allow all injections
   if (!contentElements || Object.keys(contentElements).length === 0) {
     return { allowed: true, reason: 'No contentElements config' };
   }
@@ -203,6 +203,8 @@ interface DynamicInjectionState {
   blockCount: number;
   hasFirstAd: boolean;
   injectedSlots: string[];
+  waitingForEvent: boolean;  // True when waitForEvent is configured but hasn't fired yet
+  injectionStarted: boolean;  // Guard: true once injection has started (prevents duplicate runs)
 }
 
 // Module state
@@ -217,8 +219,13 @@ let state: DynamicInjectionState = {
   charCount: 0,
   blockCount: 0,
   hasFirstAd: false,
-  injectedSlots: []
+  injectedSlots: [],
+  waitingForEvent: false,
+  injectionStarted: false
 };
+
+// Track waitForEvent subscription token for cleanup
+let waitForEventToken: string | null = null;
 
 /**
  * Build slot ID using property prefix and adType
@@ -269,6 +276,65 @@ function publish(topic: string, data: unknown): void {
     pubsub.publish({ topic, data });
     log(`Published: ${topic}`, data);
   }
+}
+
+/**
+ * Handle slot.afterRender hook - applies render styles for injected slots
+ * Called by hooks system when any slot renders; filters to only handle our slots
+ * Styles are read from mode.onRender config (wrapperStyle, labelStyle, labelText, adStyle)
+ *
+ * Uses requestAnimationFrame to ensure CSS transitions work properly.
+ * The browser needs to paint the initial state (opacity: 0 from CSS) before
+ * we set the final state (opacity: 1). Without this delay, the browser
+ * optimizes away the transition.
+ *
+ * @param {string} slotId - The slot element ID
+ */
+function handleSlotRendered(slotId: string): void {
+  // Only handle slots we created
+  if (!state.injectedSlots.includes(slotId)) return;
+
+  log(`handleSlotRendered: ${slotId}`);
+
+  // Get onRender config from mode (defaults to empty if not defined)
+  const onRender = state.activeMode?.onRender || {};
+  if (Object.keys(onRender).length === 0) {
+    log('No onRender config defined for mode, skipping render styles');
+    return;
+  }
+
+  const containerId = `${slotId}_container`;
+  const titleId = `${slotId}_title`;
+  const container = document.getElementById(containerId);
+  const title = document.getElementById(titleId);
+  const adSlot = document.getElementById(slotId);
+
+  // Use requestAnimationFrame to ensure browser has painted initial state
+  // This allows CSS transitions to animate from opacity:0 to opacity:1
+  requestAnimationFrame(() => {
+    // Apply wrapper styles from config
+    if (container && onRender.wrapperStyle) {
+      applyStyles(container, onRender.wrapperStyle);
+      log(`Applied onRender.wrapperStyle to container: ${containerId}`);
+    }
+
+    // Apply label styles and text from config
+    if (title && (onRender.labelStyle || onRender.labelText)) {
+      if (onRender.labelStyle) {
+        applyStyles(title, onRender.labelStyle);
+      }
+      if (onRender.labelText) {
+        title.innerText = onRender.labelText;
+      }
+      log(`Applied onRender label config to: ${titleId}`);
+    }
+
+    // Apply ad div styles from config
+    if (adSlot && onRender.adStyle) {
+      applyStyles(adSlot, onRender.adStyle);
+      log(`Applied onRender.adStyle to: ${slotId}`);
+    }
+  });
 }
 
 /**
@@ -384,6 +450,9 @@ export function findMatchingMode(context = {}) {
  * Accepts context and dimensionConfig from loader.getContext() and loader.dimensionConfig
  * This allows dimension names to be configured in dimensions.json rather than hardcoded
  *
+ * If the active mode has `waitForEvent`, subscribes to that PubSub topic and
+ * automatically calls injectAds() when the event fires (with runIfAlreadyPublished: true).
+ *
  * @param {Object} context - Page context from loader.getContext() (all dimensions resolved)
  * @param {Object} dimensionConfig - Dimension match type config from loader.dimensionConfig
  */
@@ -401,6 +470,8 @@ export function init(context: Record<string, any> = {}, dimensionConfig: Record<
   state.blockCount = 0;
   state.hasFirstAd = false;
   state.injectedSlots = [];
+  state.waitingForEvent = false;
+  state.injectionStarted = false;
   state.initialized = true;
 
   log('Initialized with context:', {
@@ -412,8 +483,83 @@ export function init(context: Record<string, any> = {}, dimensionConfig: Record<
     log('No active mode matched - skipping injection');
   }
 
-  // Emit ready event
+  // Check for waitForEvent - subscribe and auto-inject when event fires
   const pubsub = window[CONFIG.pubsubGlobal];
+  if (state.activeMode?.waitForEvent && pubsub?.subscribe) {
+    const eventTopic = state.activeMode.waitForEvent;
+    log(`Mode has waitForEvent: "${eventTopic}" - subscribing`);
+
+    // Clean up any previous subscription
+    if (waitForEventToken && pubsub.unsubscribe) {
+      pubsub.unsubscribe(waitForEventToken);
+      waitForEventToken = null;
+    }
+
+    // Set flag to block external injectAds() calls until event fires
+    state.waitingForEvent = true;
+
+    // Subscribe to the event - runIfAlreadyPublished ensures we don't miss it
+    waitForEventToken = pubsub.subscribe({
+      topic: eventTopic,
+      func: () => {
+        // Guard: prevent duplicate execution (runIfAlreadyPublished can cause multiple fires)
+        if (state.injectionStarted) {
+          log(`waitForEvent "${eventTopic}" fired but injection already started - skipping duplicate`);
+          return;
+        }
+
+        log(`waitForEvent "${eventTopic}" fired - running injection`);
+        state.waitingForEvent = false;  // Clear flag before injection
+        state.injectionStarted = true;  // Mark injection as started (prevents duplicates)
+
+        // Unsubscribe immediately to prevent future duplicate fires
+        if (waitForEventToken && pubsub.unsubscribe) {
+          pubsub.unsubscribe(waitForEventToken);
+          log(`Unsubscribed from "${eventTopic}" after first fire`);
+          waitForEventToken = null;
+        }
+
+        const result = injectAds();
+
+        // Late injection: Check if loader.ads.ready already fired
+        // If so, the event fired AFTER the initial ad request, so we need to
+        // manually process the newly injected slots
+        if (result.injected > 0) {
+          const eventLog = pubsub?.publishedTopics || [];
+          const adsReadyIndex = eventLog.indexOf('loader.ads.ready');
+
+          if (adsReadyIndex !== -1) {
+            log(`loader.ads.ready already fired (index ${adsReadyIndex}), processing dyn slots`);
+            // Defer to next frame to ensure DOM is stable after injection
+            requestAnimationFrame(() => {
+              // Use processInjectedSlots to only process our dyn slots
+              const slotsConfig = slots.getConfig();
+              const site = slotsConfig.site || '';
+              const zone = state.context?.section || '';
+              processInjectedSlots({ site, zone });
+            });
+          } else {
+            log('loader.ads.ready not yet fired, new slots will be processed by initial requestAds()');
+          }
+        }
+      },
+      runIfAlreadyPublished: true
+    });
+
+    log(`Subscribed to "${eventTopic}" with token: ${waitForEventToken}`);
+  }
+
+  // Register slot.afterRender hook to apply render styles
+  const loader = getLoader();
+  if (loader?.hooks?.register) {
+    loader.hooks.register('slot.afterRender', {
+      name: 'dynamicInjection.renderStyles',
+      fn: handleSlotRendered
+    });
+    log('Registered slot.afterRender hook');
+  }
+
+  // Emit ready event
   if (pubsub?.publish) {
     pubsub.publish({ topic: 'loader.dynamicInjection.ready', data: getState() });
     log('Published loader.dynamicInjection.ready');
@@ -689,23 +835,33 @@ export function getBlocks(
 
 /**
  * Create an ad container element
- * Supports per-rule wrapperClass, wrapperStyle, adClass, adStyle, and label
+ * Supports mode-level defaults and per-rule overrides for styling
+ * Style hierarchy: globals < mode defaults < rule overrides
+ * Structure: container > title > ad div
  * @param {number} index - Ad index
  * @returns {HTMLElement} The ad container div
  */
 export function createAdContainer(index: number) {
   const { containerClass, adClass, dataAttributes, defaultLabel } = injectionConfig;
-  const { matchedRule } = state;
+  const { matchedRule, activeMode } = state;
   const slotId = buildSlotId(index);
+  const containerId = `${slotId}_container`;
 
   // Create outer container
   const container = document.createElement('div');
   container.className = containerClass;
-  container.id = `${slotId}_container`;
+  container.id = containerId;
+
+  // Container data attributes
+  container.setAttribute('data-js', 'dynamicMpu-ad');
+  container.setAttribute('data-adtype', `dyn_${index}`);
+  container.setAttribute('data-ad-slot-hidden', 'false');
+  container.setAttribute('data-ad-slot-id', containerId);
+  container.setAttribute('data-perf', `commercial-perf-${index}`);
 
   // Add injection mode as data attribute for CSS targeting (CLS placeholder styling)
-  if (state.activeMode?.id) {
-    container.setAttribute('data-injection-mode', state.activeMode.id);
+  if (activeMode?.id) {
+    container.setAttribute('data-injection-mode', activeMode.id);
   }
 
   // Apply rule-specific wrapperClass (additive to default containerClass)
@@ -714,18 +870,37 @@ export function createAdContainer(index: number) {
     log(`Applied wrapperClass: ${matchedRule.wrapperClass}`);
   }
 
-  // Apply rule-specific wrapperStyle (inline styles)
+  // Apply wrapperStyle: mode default + rule override
+  if (activeMode?.defaultWrapperStyle) {
+    applyStyles(container, activeMode.defaultWrapperStyle);
+  }
   if (matchedRule?.wrapperStyle) {
     applyStyles(container, matchedRule.wrapperStyle);
     log(`Applied wrapperStyle:`, matchedRule.wrapperStyle);
   }
 
-  // Create label if configured (before ad div)
+  // Create label/title if configured (before ad div)
   const labelConfig = getLabelConfig(matchedRule, defaultLabel);
   if (labelConfig) {
-    const labelElement = createLabelElement(labelConfig);
+    // Add ID to label config ({slotId}_title pattern)
+    const labelWithId = { ...labelConfig, id: `${slotId}_title` };
+
+    // Apply mode-level defaultLabelStyle, then rule-level labelStyle override
+    if (activeMode?.defaultLabelStyle) {
+      labelWithId.style = { ...(labelWithId.style as Record<string, string> || {}), ...activeMode.defaultLabelStyle };
+    }
+    if (matchedRule?.labelStyle) {
+      labelWithId.style = { ...(labelWithId.style as Record<string, string> || {}), ...matchedRule.labelStyle };
+    }
+
+    // Set label text from onRender config if available (ensures text is there when label becomes visible)
+    if (activeMode?.onRender?.labelText && !labelWithId.text) {
+      labelWithId.text = activeMode.onRender.labelText;
+    }
+
+    const labelElement = createLabelElement(labelWithId);
     container.appendChild(labelElement);
-    log(`Applied label: ${labelConfig.text}`);
+    log(`Applied label with id: ${labelWithId.id}`);
   }
 
   // Create inner ad div
@@ -739,20 +914,19 @@ export function createAdContainer(index: number) {
     log(`Applied adClass: ${matchedRule.adClass}`);
   }
 
-  // Apply rule-specific adStyle
+  // Apply adStyle: mode default + rule override
+  if (activeMode?.defaultAdStyle) {
+    applyStyles(adDiv, activeMode.defaultAdStyle);
+  }
   if (matchedRule?.adStyle) {
     applyStyles(adDiv, matchedRule.adStyle);
     log(`Applied adStyle:`, matchedRule.adStyle);
   }
 
-  // Apply data attributes from config
+  // Apply data attributes from config (for ad div)
   Object.entries(dataAttributes).forEach(([key, value]) => {
     adDiv.setAttribute(key, value);
   });
-
-  // Hardcoded attributes (not configurable)
-  adDiv.setAttribute('data-js', 'dynamic-injected-ad');
-  adDiv.setAttribute('data-dyn-id', String(index));
 
   container.appendChild(adDiv);
 
@@ -803,16 +977,65 @@ export function injectAds(options: InjectAdsOptions = {}) {
     init();
   }
 
+  // If mode has waitForEvent configured, only allow injection from the event callback
+  // External calls should be blocked until the event fires
+  if (state.waitingForEvent) {
+    log('Waiting for event - skipping premature injection call');
+    return { injected: 0, slots: [] };
+  }
+
   // Default 'after' - ad appears AFTER the element that pushed count over threshold
   const { position = 'after' } = options;
   const rule = getRule();
-  const { activeMode } = state;
+  const { activeMode, context } = state;
+
+  log('Using rule:', rule);
+
+  // Check for customInjector function in mode config
+  if (activeMode?.customInjector && typeof activeMode.customInjector === 'function') {
+    // Guard: prevent duplicate customInjector runs
+    if (state.injectionStarted && state.adsInjected > 0) {
+      log('customInjector already ran - skipping duplicate call');
+      return { injected: state.adsInjected, slots: state.injectedSlots };
+    }
+    state.injectionStarted = true;
+
+    log('Using customInjector from mode config');
+
+    // Provide helpers for the custom injector
+    const helpers = {
+      createAdContainer,
+      insertAdBefore,
+      insertAdAfter,
+      buildSlotId,
+      findContentContainers,
+      log,
+      warn,
+      publish,
+      getState: () => state,
+      setState: (updates: Partial<DynamicInjectionState>) => {
+        Object.assign(state, updates);
+      },
+      trackSlot: (slotId: string) => {
+        state.injectedSlots.push(slotId);
+      },
+      finishInjection
+    };
+
+    try {
+      const result = activeMode.customInjector(context, rule, helpers);
+      // If customInjector returns a result, use it; otherwise return default
+      return result || { injected: state.adsInjected, slots: state.injectedSlots };
+    } catch (e) {
+      warn('customInjector threw an error:', e instanceof Error ? e.message : String(e));
+      return { injected: 0, slots: [] };
+    }
+  }
 
   // Determine counting mode from active mode config
   const countMode = activeMode?.countMode || 'chars';
   const blockSelector = activeMode?.blockSelector || '.block';
 
-  log('Using rule:', rule);
   log(`Count mode: ${countMode}`);
 
   const containers = findContentContainers();
@@ -861,12 +1084,16 @@ function injectAdsByChars(
   log(`Thresholds: firstAd=${rule.firstAd}, otherAd=${rule.otherAd}, maxAds=${rule.maxAds}, minParaChars=${minParaChars}`);
   log(`contentElements config:`, contentElements || 'none');
 
-  // Collect ALL direct children from all containers
+  // Build selector for all relevant elements (paragraphs + contentElements)
+  const contentElementSelectors = Object.keys(contentElements || {});
+  const allSelectors = [paragraphSelector, ...contentElementSelectors].join(',');
+
+  // Collect ALL matching descendants from all containers
   const allElements: Element[] = [];
   containers.forEach((container, containerIndex) => {
-    const children = Array.from(container.children);
-    log(`Container ${containerIndex}: ${children.length} direct children`);
-    children.forEach(child => allElements.push(child));
+    const elements = Array.from(container.querySelectorAll(allSelectors));
+    log(`Container ${containerIndex}: ${elements.length} matching elements (selector: ${allSelectors})`);
+    elements.forEach(el => allElements.push(el));
   });
 
   if (allElements.length === 0) {
@@ -880,6 +1107,11 @@ function injectAdsByChars(
   let charCount = 0;
   let hasFirstAd = false;
   let relevantElementIndex = 0; // Track index among relevant elements only
+
+  // Track the immediately previous element and whether it was valid for injection
+  let prevElement: Element | null = null;
+  let prevElementIndex = -1;
+  let prevElementWasValid = false;
 
   log('--- Starting element iteration loop ---');
 
@@ -914,25 +1146,24 @@ function injectAdsByChars(
     // Calculate character contribution
     let charContribution = 0;
     let elementType = '';
+    let isValidInjectionPoint = false;  // Track if this element could be an injection point
 
     if (isParagraph) {
       // Paragraph: use text length
       const text = (element as HTMLElement).innerText || element.textContent || '';
       charContribution = text.length;
-
-      // Skip paragraphs below minimum threshold
-      if (charContribution < minParaChars) {
-        log(`  [${i}] paragraph: SKIP (${charContribution} chars < ${minParaChars} minimum)`);
-        continue;
-      }
       elementType = 'paragraph';
+
+      // Use strictly greater than (not >=) for minParaChars
+      isValidInjectionPoint = charContribution > minParaChars;
     } else if (contentConfig) {
       // contentElement: use configured charValue
       charContribution = contentConfig.charValue;
       elementType = `contentElement[${matchedSelector}]`;
+      isValidInjectionPoint = contentConfig.canInjectAfter !== false;
     }
 
-    // Add to running total
+    // Add to running total (count ALL paragraphs including short ones)
     charCount += charContribution;
     relevantElementIndex++;
 
@@ -940,31 +1171,27 @@ function injectAdsByChars(
     const threshold = hasFirstAd ? rule.otherAd : rule.firstAd;
     const thresholdType = hasFirstAd ? 'otherAd' : 'firstAd';
 
-    // Log element info with injection eligibility
-    const canInjectAfterThis = isParagraph ? 'yes (paragraph)' : (contentConfig?.canInjectAfter ? 'yes' : 'no');
-    log(`  [${i}] ${elementType}: +${charContribution} chars = ${charCount} total (threshold: ${threshold} [${thresholdType}]) canInjectAfter=${canInjectAfterThis}`);
+    // Log element info
+    const validPointStr = isValidInjectionPoint ? 'yes' : `no (${charContribution} <= ${minParaChars})`;
+    log(`  [${i}] ${elementType}: +${charContribution} chars = ${charCount} total (threshold: ${threshold} [${thresholdType}]) validPoint=${validPointStr}`);
 
-    // Check if we've accumulated enough characters
-    if (charCount >= threshold) {
+    // Check if threshold met AND the immediately previous element was valid
+    if (charCount >= threshold && prevElement && prevElementWasValid) {
       // Check if we've hit maxAds limit
       if (state.dynCount >= rule.maxAds) {
         warn(`Max ads limit reached: ${rule.maxAds}, stopping`);
         break;
       }
 
-      // Don't inject after the last element (ad shouldn't be final element)
-      const isLastElement = i === allElements.length - 1;
-      if (position === 'after' && isLastElement) {
-        log(`    -> Skipping injection: would place ad after final element`);
-        break;
-      }
-
-      // Check if injection is allowed based on contentElements rules
-      // This checks both this element's canInjectAfter AND nextSibling's canInjectBefore
-      const injectionCheck = canInjectAtPosition(element, position);
+      // Check if injection is allowed based on contentElements rules at the PREVIOUS element
+      const injectionCheck = canInjectAtPosition(prevElement, position);
       if (!injectionCheck.allowed) {
-        log(`    -> Skipping injection: ${injectionCheck.reason}`);
+        log(`    -> Skipping injection at [${prevElementIndex}]: ${injectionCheck.reason}`);
         // Don't reset charCount - keep accumulating until we find a valid position
+        // Update prev tracking for next iteration
+        prevElement = element;
+        prevElementIndex = i;
+        prevElementWasValid = isValidInjectionPoint;
         continue;
       }
 
@@ -974,18 +1201,21 @@ function injectAdsByChars(
       if (document.getElementById(containerId)) {
         log(`    -> Container ${containerId} already exists, skipping`);
         state.dynCount++;
+        prevElement = element;
+        prevElementIndex = i;
+        prevElementWasValid = isValidInjectionPoint;
         continue;
       }
 
-      // Create and insert ad
+      // Create and insert ad after the previous element
       const adContainer = createAdContainer(state.dynCount);
 
-      log(`    -> INJECTING AD: ${slotId} ${position} [${i}] ${elementType} (charCount=${charCount} >= ${threshold})`);
+      log(`    -> INJECTING AD: ${slotId} after [${prevElementIndex}] (charCount=${charCount} >= ${threshold})`);
 
       if (position === 'before') {
-        insertAdBefore(element, adContainer);
+        insertAdBefore(prevElement, adContainer);
       } else {
-        insertAdAfter(element, adContainer);
+        insertAdAfter(prevElement, adContainer);
       }
 
       state.dynCount++;
@@ -999,6 +1229,11 @@ function injectAdsByChars(
       log(`    -> Resetting charCount from ${charCount} to 0`);
       charCount = 0;
     }
+
+    // Update previous element tracking for next iteration
+    prevElement = element;
+    prevElementIndex = i;
+    prevElementWasValid = isValidInjectionPoint;
   }
 
   state.hasFirstAd = hasFirstAd;
@@ -1113,6 +1348,7 @@ function injectAdsByBlocks(
 
 /**
  * Finish injection and publish events
+ * Note: Slot processing (GPT define + request) is handled by the caller based on timing
  */
 function finishInjection(results: { injected: number; slots: string[] }) {
 
@@ -1176,6 +1412,17 @@ export function removeInjectedAds() {
  */
 export function reset() {
   log('reset() called');
+
+  // Clean up waitForEvent subscription
+  if (waitForEventToken) {
+    const pubsub = window[CONFIG.pubsubGlobal];
+    if (pubsub?.unsubscribe) {
+      pubsub.unsubscribe(waitForEventToken);
+      log(`Unsubscribed waitForEvent token: ${waitForEventToken}`);
+    }
+    waitForEventToken = null;
+  }
+
   removeInjectedAds();
   state = {
     initialized: false,
@@ -1188,7 +1435,9 @@ export function reset() {
     charCount: 0,
     blockCount: 0,
     hasFirstAd: false,
-    injectedSlots: []
+    injectedSlots: [],
+    waitingForEvent: false,
+    injectionStarted: false
   };
   log('Reset complete');
 }
@@ -1247,6 +1496,12 @@ export function processInjectedSlots(context: Record<string, any> = {}, options:
     const element = document.getElementById(slotId);
     if (!element) {
       warn(`Element not found for slot: ${slotId}`);
+      return;
+    }
+
+    // Idempotent: skip slots already defined in GPT (prevents duplicate auctions)
+    if (slots.getDefinedSlots().has(slotId)) {
+      log(`Slot ${slotId} already defined in GPT - skipping`);
       return;
     }
 

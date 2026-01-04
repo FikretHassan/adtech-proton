@@ -301,7 +301,7 @@ export default {
 };
 ```
 
-Available hooks: `loader.beforeInit`, `loader.afterInit`, `partners.afterReady`, `partners.allReady`, `partners.nonCoreReady`, `partners.onTimeout`, `slot.beforeDefine`, `slot.afterDefine`, `ads.beforeRequest`, `slot.beforeRequest`, `slot.afterRequest`, `ads.afterRequest`, `slot.beforeRender`, `slot.afterRender`, `slot.onEmpty`, `slot.beforeRefresh`, `slot.afterRefresh`, `injection.beforeInject`, `injection.afterInject`
+Available hooks: `loader.beforeInit`, `loader.afterInit`, `loader.ready`, `partners.afterReady`, `partners.allReady`, `partners.nonCoreReady`, `partners.onTimeout`, `slot.beforeDefine`, `slot.afterDefine`, `ads.beforeRequest`, `slot.beforeRequest`, `slot.afterRequest`, `ads.afterRequest`, `slot.beforeRender`, `slot.afterRender`, `slot.onEmpty`, `slot.beforeRefresh`, `slot.afterRefresh`, `injection.beforeInject`, `injection.afterInject`
 
 See [docs/hooks.md](docs/hooks.md).
 

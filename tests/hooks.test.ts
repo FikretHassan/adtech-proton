@@ -10,7 +10,9 @@ import {
   getLifecyclePoints,
   clear,
   reset,
-  setDebug
+  setDebug,
+  getExecutionHistory,
+  clearExecutionHistory
 } from '../src/hooks';
 
 // Mock the loader
@@ -492,6 +494,101 @@ describe('hooks', () => {
       setDebug(false);
       const state = getState();
       expect(state.debugMode).toBe(false);
+    });
+  });
+
+  describe('execution history', () => {
+    beforeEach(() => {
+      init();
+    });
+
+    it('records executed hooks', async () => {
+      register('loader.beforeInit', { name: 'executedHook', fn: vi.fn() });
+
+      await execute('loader.beforeInit');
+
+      const history = getExecutionHistory();
+      expect(history.length).toBe(1);
+      expect(history[0].hook).toBe('executedHook');
+      expect(history[0].status).toBe('executed');
+      expect(history[0].point).toBe('loader.beforeInit');
+      expect(history[0].timestamp).toBeDefined();
+    });
+
+    it('records executed hooks in executeSync', () => {
+      register('loader.beforeInit', { name: 'syncExecutedHook', fn: vi.fn() });
+
+      executeSync('loader.beforeInit');
+
+      const history = getExecutionHistory();
+      expect(history.length).toBe(1);
+      expect(history[0].hook).toBe('syncExecutedHook');
+      expect(history[0].status).toBe('executed');
+    });
+
+    it('records errors with reason', async () => {
+      register('loader.beforeInit', {
+        name: 'errorHook',
+        fn: () => { throw new Error('Test error'); }
+      });
+
+      await execute('loader.beforeInit');
+
+      const history = getExecutionHistory();
+      expect(history[0].status).toBe('error');
+      expect(history[0].reason).toContain('Test error');
+    });
+
+    it('filters by hook name', async () => {
+      register('loader.beforeInit', { name: 'hook1', fn: vi.fn() });
+      register('loader.beforeInit', { name: 'hook2', fn: vi.fn() });
+
+      await execute('loader.beforeInit');
+
+      const filtered = getExecutionHistory('hook1');
+      expect(filtered.length).toBe(1);
+      expect(filtered[0].hook).toBe('hook1');
+    });
+
+    it('returns copy of history array', () => {
+      const history1 = getExecutionHistory();
+      const history2 = getExecutionHistory();
+      expect(history1).not.toBe(history2);
+    });
+
+    it('clears execution history', async () => {
+      register('loader.beforeInit', { name: 'toBeCleared', fn: vi.fn() });
+      await execute('loader.beforeInit');
+
+      expect(getExecutionHistory().length).toBe(1);
+
+      clearExecutionHistory();
+
+      expect(getExecutionHistory().length).toBe(0);
+    });
+
+    it('reset() clears execution history', async () => {
+      register('loader.beforeInit', { name: 'resetTest', fn: vi.fn() });
+      await execute('loader.beforeInit');
+
+      expect(getExecutionHistory().length).toBe(1);
+
+      reset();
+
+      expect(getExecutionHistory().length).toBe(0);
+    });
+
+    it('tracks multiple executions across lifecycle points', async () => {
+      register('loader.beforeInit', { name: 'initHook', fn: vi.fn() });
+      register('loader.afterInit', { name: 'afterHook', fn: vi.fn() });
+
+      await execute('loader.beforeInit');
+      await execute('loader.afterInit', ['modules']);
+
+      const history = getExecutionHistory();
+      expect(history.length).toBe(2);
+      expect(history[0].point).toBe('loader.beforeInit');
+      expect(history[1].point).toBe('loader.afterInit');
     });
   });
 

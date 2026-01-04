@@ -266,16 +266,31 @@ const internalModules = {
 };
 
 /**
- * Generate import statements for internal modules
+ * Path to targeting functions (for standalone internal functions)
  */
-function generateImports(modules) {
-  if (modules.size === 0) return '';
+const targetingFunctionsPath = '../../config/targetingFunctions/index.js';
 
-  const imports = Array.from(modules)
-    .map(mod => `import ${mod} from '${internalModules[mod]}';`)
-    .join('\n');
+/**
+ * Generate import statements for internal modules and standalone functions
+ */
+function generateImports(modules, standaloneFunctions = new Set()) {
+  const importLines = [];
 
-  return imports + '\n\n';
+  // Import internal modules (e.g., sizemapping)
+  if (modules.size > 0) {
+    Array.from(modules).forEach(mod => {
+      importLines.push(`import ${mod} from '${internalModules[mod]}';`);
+    });
+  }
+
+  // Import standalone functions from targetingFunctions
+  if (standaloneFunctions.size > 0) {
+    const fnList = Array.from(standaloneFunctions).join(', ');
+    importLines.push(`import { ${fnList} } from '${targetingFunctionsPath}';`);
+  }
+
+  if (importLines.length === 0) return '';
+  return importLines.join('\n') + '\n\n';
 }
 
 /**
@@ -478,15 +493,23 @@ ${cases}
 
 /**
  * Collect internal imports from ALL dimension configs (common + all properties)
+ * Returns { modules: Set<string>, standaloneFunctions: Set<string> }
  */
 function collectAllInternalImports(dims) {
-  const imports = new Set();
+  const modules = new Set();
+  const standaloneFunctions = new Set();
 
   const scanConfig = (config) => {
     if (config.source === 'internal' && config.fn) {
-      const moduleName = config.fn.split('.')[0];
-      if (internalModules[moduleName]) {
-        imports.add(moduleName);
+      // Check if it's a module.method pattern
+      if (config.fn.includes('.')) {
+        const moduleName = config.fn.split('.')[0];
+        if (internalModules[moduleName]) {
+          modules.add(moduleName);
+        }
+      } else {
+        // Standalone function (no dot) - import from targetingFunctions
+        standaloneFunctions.add(config.fn);
       }
     }
   };
@@ -508,7 +531,7 @@ function collectAllInternalImports(dims) {
     Object.values(dims).forEach(scanConfig);
   }
 
-  return imports;
+  return { modules, standaloneFunctions };
 }
 
 // Analyze dimensions structure
@@ -517,8 +540,8 @@ const common = hasPropertyStructure ? (dimensions.common || {}) : dimensions;
 const propertySpecificDims = hasPropertyStructure ? getPropertySpecificDimensions(dimensions) : {};
 
 // Generate the dimensions module
-const requiredImports = collectAllInternalImports(dimensions);
-const importsCode = generateImports(requiredImports);
+const { modules: requiredModules, standaloneFunctions } = collectAllInternalImports(dimensions);
+const importsCode = generateImports(requiredModules, standaloneFunctions);
 
 // Check if we need getProperty import (only if there are property-specific dimensions)
 const needsPropertyImport = Object.keys(propertySpecificDims).length > 0;

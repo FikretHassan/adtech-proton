@@ -9,10 +9,17 @@
  * | active            | boolean  | Yes      | Enable/disable this mode                             |
  * | properties        | string[] | No       | Property IDs where mode runs (undefined = all)       |
  * | match             | object   | Yes      | Dimension criteria to match this mode                |
- * | contentSelectors  | string[] | Yes      | CSS selectors for content containers (first match)   |
+ * | contentSelectors  | string[] | Yes*     | CSS selectors for content containers (first match)   |
  * | countMode         | string   | No       | 'chars' (default) or 'blocks'                        |
  * | blockSelector     | string   | No       | CSS selector for blocks (required if countMode: 'blocks') |
+ * | waitForEvent      | string   | No       | PubSub topic to wait for before injection            |
+ * | customInjector    | function | No       | Custom function for complex injection (bypasses counting) |
+ * | defaultAdStyle    | object   | No       | Default styles for ad div (applied to all rules)     |
+ * | defaultLabelStyle | object   | No       | Default styles for label (applied to all rules)      |
+ * | onRender          | object   | No       | Styles applied when ad renders (via slot.afterRender)|
  * | rules             | array    | Yes      | Dimension-based injection rules                      |
+ *
+ * *contentSelectors not required when using customInjector
  *
  * RULE-LEVEL OPTIONS:
  *
@@ -169,4 +176,106 @@ export default {
  *     config: { firstAd: 550, otherAd: 1000, maxAds: 6 }
  *   }
  * ]
+ *
+ * ============================================================================
+ * WAITFOREVENT EXAMPLE (async/deferred content):
+ * ============================================================================
+ *
+ * Delays injection until a PubSub topic fires. Useful when content loads
+ * asynchronously after initial page render.
+ *
+ * export default {
+ *   active: true,
+ *   match: { pagetype: ['feed'] },
+ *   waitForEvent: 'page.content.ready',  // Waits for this PubSub topic
+ *   contentSelectors: ['.feed-content'],
+ *   rules: [...]
+ * };
+ *
+ * ============================================================================
+ * ONRENDER STYLE HIERARCHY (collapsed → expand on load):
+ * ============================================================================
+ *
+ * Ads start collapsed and expand when they render. Prevents CLS (Cumulative
+ * Layout Shift) by only expanding after ad content loads.
+ *
+ * export default {
+ *   active: true,
+ *   match: { pagetype: ['feed'] },
+ *   // Initial state: collapsed
+ *   defaultAdStyle: { height: '0px', opacity: '0' },
+ *   defaultLabelStyle: { height: '0px' },
+ *   // Applied when ad renders (via slot.afterRender hook)
+ *   onRender: {
+ *     wrapperStyle: { height: 'auto', marginBottom: '24px' },
+ *     labelStyle: { height: '25px' },
+ *     labelText: 'Advertisement',
+ *     adStyle: { height: 'auto', opacity: '1' }
+ *   },
+ *   rules: [...]
+ * };
+ *
+ * ============================================================================
+ * CUSTOMINJECTOR EXAMPLE (complex injection logic):
+ * ============================================================================
+ *
+ * For scenarios that can't be expressed with standard counting rules.
+ * Bypasses the built-in counting and gives full control over injection.
+ *
+ * function myCustomInjector(context, rule, helpers) {
+ *   // helpers available:
+ *   //   createAdContainer(index) - creates styled container div
+ *   //   insertAdBefore(ref, container) - insert before element
+ *   //   insertAdAfter(ref, container) - insert after element
+ *   //   buildSlotId(index) - builds slot ID string
+ *   //   trackSlot(slotId) - registers slot for GPT processing
+ *   //   getState() - get current injection state
+ *   //   setState(updates) - update injection state
+ *   //   finishInjection(results) - publish events and return
+ *   //   log(message, data) - debug logging
+ *   //   warn(message, data) - warning logging
+ *
+ *   var results = { injected: 0, slots: [] };
+ *   var state = helpers.getState();
+ *   var dynCount = state.dynCount || 0;
+ *
+ *   function injectAd(referenceNode) {
+ *     if (dynCount >= rule.maxAds) return false;
+ *     var container = helpers.createAdContainer(dynCount);
+ *     helpers.insertAdAfter(referenceNode, container);
+ *     helpers.trackSlot(helpers.buildSlotId(dynCount));
+ *     results.slots.push(helpers.buildSlotId(dynCount));
+ *     results.injected++;
+ *     dynCount++;
+ *     return true;
+ *   }
+ *
+ *   // Your custom logic here - iterate content, apply rules, call injectAd()
+ *   var items = document.querySelectorAll('.content-item');
+ *   items.forEach(function(item, i) {
+ *     if (i > 0 && i % rule.itemInterval === 0) {
+ *       injectAd(item);
+ *     }
+ *   });
+ *
+ *   helpers.setState({ dynCount: dynCount });
+ *   return helpers.finishInjection(results);
+ * }
+ *
+ * export default {
+ *   active: true,
+ *   match: { pagetype: ['feed'] },
+ *   waitForEvent: 'page.content.ready',
+ *   customInjector: myCustomInjector,
+ *   rules: [
+ *     {
+ *       match: { userState: ['anon'] },
+ *       config: { maxAds: 6, itemInterval: 3 }
+ *     },
+ *     {
+ *       match: { userState: ['sub'] },
+ *       config: { maxAds: 2, itemInterval: 5 }
+ *     }
+ *   ]
+ * };
  */
