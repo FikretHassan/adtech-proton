@@ -894,6 +894,9 @@ Object.defineProperty(loader, 'config', {
 // Expose globally with configurable name
 window[CONFIG.globalName] = loader;
 
+// Execute loader.ready hooks (loader is now available to hooks via window[CONFIG.globalName])
+hooks.executeSync('loader.ready', loader);
+
 } // End of if (!adsDisabled) block
 
 export default window[CONFIG.globalName];

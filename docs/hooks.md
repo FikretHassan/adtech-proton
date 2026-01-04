@@ -190,6 +190,8 @@ The demo file also shows examples of **multiple hooks per point** (e.g., one log
 | `priority` | number | 8 | Execution order 1-16 (lower = earlier, wonder where we got this idea!) |
 | `async` | boolean | false | Whether to await this hook |
 | `once` | boolean | false | Auto-unregister after first execution |
+| `match` | object | - | Dimension criteria to conditionally execute (AND logic) |
+| `exclude` | object | - | Dimension criteria to skip execution (OR logic) |
 
 ### Priority Constants
 
@@ -206,6 +208,42 @@ import { PRIORITIES } from '../../src/constants';
 
 Or use raw numbers 1-16 for fine-grained control.
 
+### Conditional Execution with Dimensions
+
+Hooks can be conditionally executed using `match` and `exclude` rules. These use the same dimension system as partners, injection modes, and custom slots (see `dimensions.json`).
+
+```javascript
+'loader.ready': [{
+  name: 'mobileOnlySetup',
+  priority: 10,
+  match: {
+    viewport: ['m', 's', 'xs']
+  },
+  fn: (loader) => {
+    loader.log('[Hooks] Running mobile-only setup');
+  }
+}]
+```
+
+**Match/Exclude Rules:**
+- `match`: ALL conditions must pass (AND logic between dimensions, OR logic within values)
+- `exclude`: ANY condition blocks execution (OR logic)
+- Uses `evaluateTargeting()` - same logic as partners, injection modes, etc.
+- If neither `match` nor `exclude` specified, hook runs unconditionally
+
+**Available Dimensions:**
+Any dimension defined in `dimensions.json`: `pagetype`, `viewport`, `renderertype`, `userState`, `geo`, `adLite`, `section`, etc.
+
+```javascript
+// Example: Desktop only, exclude ad-lite users
+{
+  name: 'desktopAnalytics',
+  match: { viewport: ['x', 'l'] },
+  exclude: { adLite: ['true'] },
+  fn: () => { /* ... */ }
+}
+```
+
 ---
 
 ## Lifecycle Points
@@ -216,6 +254,7 @@ Or use raw numbers 1-16 for fine-grained control.
 |------|------|-----------|
 | `loader.beforeInit` | Before any modules initialize | none |
 | `loader.afterInit` | After core modules initialized | `modules[]` |
+| `loader.ready` | After loader is fully initialized and exposed to window | `loader` |
 
 ```javascript
 'loader.beforeInit': [{
@@ -226,6 +265,10 @@ Or use raw numbers 1-16 for fine-grained control.
   }
 }]
 ```
+
+**`loader.ready` vs `loader.afterInit`:**
+- `loader.afterInit` fires early during initialization - the loader object is not yet on `window`
+- `loader.ready` fires after `window[globalName] = loader` - use this when your hook needs the loader object or its methods
 
 ### PARTNERS Phase
 
@@ -445,6 +488,31 @@ Remove all registered hooks.
 
 ```javascript
 proton.hooks.clear();
+```
+
+### `hooks.getExecutionHistory(hookName?)`
+
+Get execution history showing which hooks ran and which were skipped.
+
+```javascript
+proton.hooks.getExecutionHistory();
+// [
+//   { point: 'loader.ready', hook: 'myHook', status: 'executed', timestamp: 1234567890 },
+//   { point: 'loader.ready', hook: 'otherHook', status: 'skipped:dimensions', timestamp: 1234567891, reason: '...' }
+// ]
+
+// Filter by hook name
+proton.hooks.getExecutionHistory('myHook');
+```
+
+**Statuses:** `executed`, `skipped:dimensions`, `skipped:property`, `error`
+
+### `hooks.clearExecutionHistory()`
+
+Clear execution history (also called by `reset()`).
+
+```javascript
+proton.hooks.clearExecutionHistory();
 ```
 
 ---

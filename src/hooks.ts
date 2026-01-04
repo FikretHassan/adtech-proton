@@ -10,7 +10,7 @@
  */
 
 import CONFIG from '../config/loader.js';
-import { matchesProperty } from './targeting';
+import { matchesProperty, evaluateTargeting } from './targeting';
 import { getProperty } from './property';
 import { PRIORITIES } from './constants';
 
@@ -35,6 +35,36 @@ function getLoader() {
 }
 
 /**
+ * Check if hook matches current page dimensions
+ * @param hook - Hook with optional match/exclude rules
+ * @returns true if hook should execute on this page
+ */
+function matchesDimensions(hook: any): boolean {
+  // If no match/exclude rules, hook applies to all pages
+  if (!hook.match && !hook.exclude) {
+    return true;
+  }
+
+  const loader = getLoader();
+  if (!loader?.getContext || !loader?.dimensionConfig) {
+    // Can't evaluate without context - default to matching
+    return true;
+  }
+
+  const context = loader.getContext();
+  const dimensionConfig = loader.dimensionConfig;
+
+  const result = evaluateTargeting(
+    hook.match || {},
+    hook.exclude || {},
+    context,
+    dimensionConfig
+  );
+
+  return result.matched;
+}
+
+/**
  * Log helper - uses loader's log system if available
  */
 function log(message: string, data: unknown = null): void {
@@ -53,6 +83,27 @@ let state = {
 // Registry of hooks by lifecycle point
 const registry: Record<string, any[]> = {};
 
+// Execution history - tracks which hooks ran and which were skipped
+interface ExecutionRecord {
+  point: string;
+  hook: string;
+  status: 'executed' | 'skipped:dimensions' | 'skipped:property' | 'error';
+  timestamp: number;
+  reason?: string;
+}
+const executionHistory: ExecutionRecord[] = [];
+const MAX_EXECUTION_HISTORY = 1000;
+
+/**
+ * Record an execution event with automatic cap to prevent unbounded growth
+ */
+function recordExecution(record: ExecutionRecord): void {
+  executionHistory.push(record);
+  if (executionHistory.length > MAX_EXECUTION_HISTORY) {
+    executionHistory.shift();
+  }
+}
+
 // Available lifecycle points with descriptions
 const LIFECYCLE_POINTS: Record<string, { description: string; phase: string; args: string[] }> = {
   // Initialization phase
@@ -65,6 +116,11 @@ const LIFECYCLE_POINTS: Record<string, { description: string; phase: string; arg
     description: 'After core modules initialized',
     phase: 'init',
     args: ['modules']
+  },
+  'loader.ready': {
+    description: 'After loader is fully initialized and exposed to window',
+    phase: 'init',
+    args: ['loader']
   },
 
   // Partner orchestration phase
@@ -270,7 +326,9 @@ export function register(point: string, hookConfig: any) {
     priority: hookConfig.priority ?? PRIORITIES.DEFAULT,
     async: hookConfig.async ?? false,
     once: hookConfig.once ?? false,
-    properties: hookConfig.properties // undefined = all properties
+    properties: hookConfig.properties, // undefined = all properties
+    match: hookConfig.match,           // dimension matching rules (e.g., { renderertype: ['app/next/live'] })
+    exclude: hookConfig.exclude        // dimension exclusion rules
   };
 
   registry[point].push(hook);
@@ -326,11 +384,38 @@ export async function execute(point: string, ...args: any[]) {
     return { point, hooks: [], results: [] };
   }
 
-  // Filter hooks by property
+  // Filter hooks by property and dimensions, tracking skipped hooks
   const currentProperty = getProperty();
-  const applicableHooks = registry[point].filter(hook =>
-    matchesProperty(hook.properties, currentProperty)
-  );
+  const applicableHooks: any[] = [];
+
+  for (const hook of registry[point]) {
+    // First check property
+    if (!matchesProperty(hook.properties, currentProperty)) {
+      recordExecution({
+        point,
+        hook: hook.name,
+        status: 'skipped:property',
+        timestamp: Date.now(),
+        reason: `Property mismatch: ${currentProperty}`
+      });
+      continue;
+    }
+    // Then check dimensions (match/exclude rules)
+    if (!matchesDimensions(hook)) {
+      recordExecution({
+        point,
+        hook: hook.name,
+        status: 'skipped:dimensions',
+        timestamp: Date.now(),
+        reason: 'Dimension match/exclude rules not satisfied'
+      });
+      if (state.debugMode) {
+        log(`Hook ${hook.name} skipped - dimensions not matched`);
+      }
+      continue;
+    }
+    applicableHooks.push(hook);
+  }
 
   if (applicableHooks.length === 0) {
     if (state.debugMode) {
@@ -365,6 +450,12 @@ export async function execute(point: string, ...args: any[]) {
       }
 
       results.push({ name: hook.name, success: true, result });
+      recordExecution({
+        point,
+        hook: hook.name,
+        status: 'executed',
+        timestamp: Date.now()
+      });
 
       if (hook.once) {
         hooksToRemove.push(hook.name);
@@ -375,7 +466,14 @@ export async function execute(point: string, ...args: any[]) {
       }
     } catch (error) {
       results.push({ name: hook.name, success: false, error });
-      
+      recordExecution({
+        point,
+        hook: hook.name,
+        status: 'error',
+        timestamp: Date.now(),
+        reason: String(error)
+      });
+
       console.error(
         `%c[Hooks] Error in ${hook.name} at ${point}:`,
         COLORS.error,
@@ -416,11 +514,38 @@ export function executeSync(point: string, ...args: any[]) {
     return { point, hooks: [], results: [] };
   }
 
-  // Filter hooks by property
+  // Filter hooks by property and dimensions, tracking skipped hooks
   const currentProperty = getProperty();
-  const applicableHooks = registry[point].filter(hook =>
-    matchesProperty(hook.properties, currentProperty)
-  );
+  const applicableHooks: any[] = [];
+
+  for (const hook of registry[point]) {
+    // First check property
+    if (!matchesProperty(hook.properties, currentProperty)) {
+      recordExecution({
+        point,
+        hook: hook.name,
+        status: 'skipped:property',
+        timestamp: Date.now(),
+        reason: `Property mismatch: ${currentProperty}`
+      });
+      continue;
+    }
+    // Then check dimensions (match/exclude rules)
+    if (!matchesDimensions(hook)) {
+      recordExecution({
+        point,
+        hook: hook.name,
+        status: 'skipped:dimensions',
+        timestamp: Date.now(),
+        reason: 'Dimension match/exclude rules not satisfied'
+      });
+      if (state.debugMode) {
+        log(`Hook ${hook.name} skipped - dimensions not matched (sync)`);
+      }
+      continue;
+    }
+    applicableHooks.push(hook);
+  }
 
   if (applicableHooks.length === 0) {
     if (state.debugMode) {
@@ -449,12 +574,25 @@ export function executeSync(point: string, ...args: any[]) {
 
       const result = hook.fn(...args);
       results.push({ name: hook.name, success: true, result });
+      recordExecution({
+        point,
+        hook: hook.name,
+        status: 'executed',
+        timestamp: Date.now()
+      });
 
       if (hook.once) {
         hooksToRemove.push(hook.name);
       }
     } catch (error) {
       results.push({ name: hook.name, success: false, error });
+      recordExecution({
+        point,
+        hook: hook.name,
+        status: 'error',
+        timestamp: Date.now(),
+        reason: String(error)
+      });
       console.error(`%c[Hooks] Error in ${hook.name}:`, COLORS.error, error);
     }
   }
@@ -521,6 +659,7 @@ export function clear() {
  */
 export function reset() {
   clear();
+  clearExecutionHistory();
   state = {
     initialized: false,
     debugMode: false
@@ -539,6 +678,25 @@ export function setDebug(enabled: boolean) {
   }
 }
 
+/**
+ * Get execution history - shows which hooks ran and which were skipped
+ * @param {string} [hookName] - Optional filter by hook name
+ * @returns {Array} Execution history records
+ */
+export function getExecutionHistory(hookName?: string) {
+  if (hookName) {
+    return executionHistory.filter(r => r.hook === hookName);
+  }
+  return [...executionHistory];
+}
+
+/**
+ * Clear execution history
+ */
+export function clearExecutionHistory() {
+  executionHistory.length = 0;
+}
+
 export default {
   init,
   register,
@@ -550,5 +708,7 @@ export default {
   getLifecyclePoints,
   clear,
   reset,
-  setDebug
+  setDebug,
+  getExecutionHistory,
+  clearExecutionHistory
 };

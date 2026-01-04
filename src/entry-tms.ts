@@ -278,6 +278,9 @@ Object.defineProperty(loader, 'config', {
 
 window[CONFIG.globalName] = loader;
 
+// Execute loader.ready hooks (loader is now available to hooks via window[CONFIG.globalName])
+hooks.executeSync('loader.ready', loader);
+
 } // End of if (!adsDisabled)
 
 export default window[CONFIG.globalName];

@@ -7,6 +7,8 @@ export interface LabelConfig {
   text: string;
   class?: string;
   style?: Record<string, string> | string;
+  dataAttributes?: Record<string, string>;
+  id?: string;
 }
 
 /**
@@ -66,8 +68,18 @@ export function createLabelElement(config: LabelConfig): HTMLElement {
   label.className = config.class || 'advert-label';
   label.textContent = config.text;
 
+  if (config.id) {
+    label.id = config.id;
+  }
+
   if (config.style) {
     applyStyles(label, config.style);
+  }
+
+  if (config.dataAttributes) {
+    Object.entries(config.dataAttributes).forEach(([key, value]) => {
+      label.setAttribute(key, value);
+    });
   }
 
   return label;
